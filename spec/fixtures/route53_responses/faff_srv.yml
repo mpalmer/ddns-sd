@@ -1,0 +1,10 @@
+:is_truncated: false
+:max_items: 100
+:resource_record_sets:
+- :name: faff._http._tcp.example.com.
+  :type: SRV
+  :ttl: 42
+  :resource_records:
+  - :value: 0 0 80 faff.host1.example.com
+  - :value: 0 0 8080 host3.example.com
+

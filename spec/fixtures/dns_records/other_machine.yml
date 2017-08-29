@@ -1,0 +1,13 @@
+- name: zomg.someone-else.example.com
+  type: A
+  ttl: 60
+  data:
+  - 192.0.2.123
+- name: pub80._http._tcp.example.com
+  type: SRV
+  ttl: 60
+  data:
+  - 0
+  - 0
+  - 8080
+  - zomg.someone-else.example.com

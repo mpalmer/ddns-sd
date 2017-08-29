@@ -1,0 +1,30 @@
+#!/usr/bin/env ruby
+
+require 'ddnssd/system'
+require 'logger'
+
+Thread.abort_on_exception
+
+logger = Logger.new($stderr)
+logger.level = Logger.const_get(ENV['DDNSSD_LOG_LEVEL'] || "INFO")
+
+if ENV['DDNSSD_DISABLE_LOG_TIMESTAMPS']
+  logger.formatter = ->(s, t, p, m) { "#{s[0]} #{p} #{m}\n" }
+else
+  logger.formatter = ->(s, t, p, m) { "#{t.strftime("%Y-%m-%d %H:%M:%S")} #{s[0]} #{p} #{m}\n" }
+end
+
+Signal.trap("USR1") do
+  logger.level -= 1 unless logger.level == Logger::DEBUG
+end
+
+Signal.trap("USR2") do
+  logger.level += 1 unless logger.level == Logger::ERROR
+end
+
+begin
+  DDNSSD::System.new(ENV, logger: logger).run
+rescue DDNSSD::Config::InvalidEnvironmentError => ex
+  $stderr.puts "F Invalid configuration: #{ex.message}"
+  exit 1
+end

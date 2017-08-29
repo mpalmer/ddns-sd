@@ -1,0 +1,14 @@
+Name: exposed80
+Config:
+  Labels:
+    org.discourse.service._http.port: "80"
+  ExposedPorts:
+    80/tcp: {}
+    80/udp: {}
+NetworkSettings:
+  Ports: {}
+  Gateway: 172.17.0.1
+  GlobalIPv6Address: '2001:db8::42'
+  IPAddress: 172.17.0.42
+id: asdfasdfexposed80
+

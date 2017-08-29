@@ -1,0 +1,44 @@
+:is_truncated: false
+:max_items: 100
+:resource_record_sets:
+- :name: example.com.
+  :type: SOA
+  :ttl: 60
+  :resource_records:
+  - :value: ns1.example.com hostmaster.example.com 1 1 1 1 1
+- :name: example.com.
+  :type: NS
+  :ttl: 60
+  :resource_records:
+  - :value: ns1.example.com.
+  - :value: ns2.example.com.
+- :name: foo.example.com.
+  :type: A
+  :ttl: 60
+  :resource_records:
+  - :value: 192.0.2.42
+- :name: foo.example.com.
+  :type: AAAA
+  :ttl: 60
+  :resource_records:
+  - :value: 2001:db8::42
+- :name: bar._http._tcp.example.com.
+  :type: SRV
+  :ttl: 60
+  :resource_records:
+  - :value: 0 0 8080 foo.example.com
+- :name: bar._http._tcp.example.com.
+  :type: TXT
+  :ttl: 60
+  :resource_records:
+  - :value: '""'
+- :name: _http._tcp.example.com.
+  :type: PTR
+  :ttl: 60
+  :resource_records:
+  - :value: bar._http._tcp.example.com
+- :name: bar.example.com.
+  :type: CNAME
+  :ttl: 60
+  :resource_records:
+  - :value: foo.example.com

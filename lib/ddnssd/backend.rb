@@ -1,0 +1,77 @@
+require 'frankenstein/request'
+
+require 'ddnssd/error'
+
+module DDNSSD
+  class Backend
+    class InvalidRequest < DDNSSD::Error; end
+
+    def self.backend_name
+      self.to_s.split("::").last.gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2').gsub(/([a-z\d])([A-Z])/, '\1_\2').downcase
+    end
+
+    def initialize(config)
+      @config = config
+      @logger = @config.logger
+
+      @request_stats = Frankenstein::Request.new(:ddnssd_backend, description: "DNS backend", registry: @config.metrics_registry)
+    end
+
+    def dns_records
+      #:nocov:
+      raise NoMethodError, "#dns_records not implemented by backend #{self.class}"
+      #:nocov:
+    end
+
+    def publish_record(rr)
+      @request_stats.measure(op: "publish", rrtype: rr.type.to_s) do
+        @logger.debug(progname) { "Publishing record #{rr.name} #{rr.ttl} #{rr.type} #{rr.value}" }
+
+        case rr.type
+        when :A, :AAAA, :CNAME, :TXT
+          set_record(rr)
+        when :SRV, :PTR
+          add_record(rr)
+        else
+          raise InvalidRequest,
+            "Don't know how to publish a #{rr.type} record"
+        end
+      end
+    rescue InvalidRequest
+      raise
+    rescue StandardError => ex
+      #:nocov:
+      @logger.error(progname) do
+        (["Error while publishing record #{rr.inspect}: #{ex.message} (#{ex.class})"] + ex.backtrace).join("\n  ")
+      end
+      #:nocov:
+    end
+
+    def suppress_record(rr)
+      @request_stats.measure(op: "suppress", rrtype: rr.type.to_s) do
+        @logger.debug(progname) { "Suppressing record #{rr.name} #{rr.ttl} #{rr.type} #{rr.value}" }
+
+        case rr.type
+        when :A, :AAAA, :CNAME
+          remove_record(rr)
+        when :SRV
+          remove_srv_record(rr)
+        when :TXT, :PTR
+          raise InvalidRequest,
+            "Cannot unconditionally suppress a #{rr.type} record"
+        else
+          raise InvalidRequest,
+            "Don't know how to suppress a #{rr.type} record"
+        end
+      end
+    rescue InvalidRequest
+      raise
+    rescue StandardError => ex
+      #:nocov:
+      @logger.error(progname) do
+        (["Error while suppressing record #{rr.inspect}: #{ex.message} (#{ex.class})"] + ex.backtrace).join("\n  ")
+      end
+      #:nocov:
+    end
+  end
+end

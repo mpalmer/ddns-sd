@@ -1,0 +1,9 @@
+:is_truncated: false
+:max_items: 100
+:resource_record_sets:
+- :name: faff._http._tcp.example.com.
+  :type: TXT
+  :ttl: 42
+  :resource_records:
+  - :value: '"something \"funny\""'
+

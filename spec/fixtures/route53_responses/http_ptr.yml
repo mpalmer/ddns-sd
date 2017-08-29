@@ -1,0 +1,9 @@
+:is_truncated: false
+:max_items: 100
+:resource_record_sets:
+- :name: _http._tcp.example.com.
+  :type: PTR
+  :ttl: 42
+  :resource_records:
+  - :value: xyzzy._http._tcp.example.com
+  - :value: argle._http._tcp.example.com

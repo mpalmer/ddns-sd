@@ -1,0 +1,8 @@
+:is_truncated: false
+:max_items: 100
+:resource_record_sets:
+- :name: flingle.example.com.
+  :type: A
+  :ttl: 42
+  :resource_records:
+  - :value: 192.0.2.42
