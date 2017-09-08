@@ -38,7 +38,7 @@ namespace :docker do
   end
 
   desc "Publish a new docker image"
-  task :publish => :build do
+  task publish: :build do
     sh "docker push discourse/ddns-sd"
   end
 end
