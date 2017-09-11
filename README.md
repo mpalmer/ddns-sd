@@ -24,6 +24,9 @@ environment variables shown above are the minimum configuration required
 (see "Configuration", below, for all valid environment variables and their
 meaning).
 
+Note that `ddns-sd` runs as UID 1000, with GIDs 1000 and 999.  The socket
+that you pass into the container must be accessible by one of those IDs.
+
 You can also run `ddns-sd` without a container, for testing or whatever
 takes your fancy, as follows:
 
