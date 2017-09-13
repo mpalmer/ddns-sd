@@ -8,6 +8,7 @@ require 'ddnssd/error'
 
 class DDNSSD::Backend::Route53 < DDNSSD::Backend
   class RetryError < DDNSSD::Error; end
+  class InvalidChangeRequest < DDNSSD::Error; end
 
   module Retryable
     def retryable
@@ -190,7 +191,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
 
         @record_cache.refresh(rr.name, rr.type)
 
-        @logger.debug(progname) { "record set for #{rr.name} #{rr.type} is now #{@dns_records[rr.name][rr.type].inspect}" }
+        @logger.debug(progname) { "record set for #{rr.name} #{rr.type} is now #{@record_cache.get(rr.name, rr.type).inspect}" }
         retry
       else
         @logger.error(progname) { "Cannot get this add_record change to apply, because #{ex.message}: #{changes.inspect}. Giving up." }
@@ -292,13 +293,27 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
   def change_to_remove_record_from_set(rrset, rr)
     @logger.debug(progname) { "change_to_remove_record_from_set(#{rrset.inspect}, #{rr.inspect})" }
 
-    if rrset.nil? || rrset.empty?
+    if rrset.any? { |s| s.name != rr.name }
+      # Purely an (in)sanity check
+      #:nocov:
+      raise InvalidChangeRequest,
+        "One or more entries in rrset #{rrset.inspect} have a different name to #{rr}."
+      #:nocov:
+    end
+
+    if rrset.nil?
+      # *Really* shouldn't happen...
+      #:nocov:
+      raise InvalidChangeRequest,
+        "rrset passed was nil!"
+      #:nocov:
+    elsif rrset.empty?
       # *Shouldn't* happen...
       #:nocov:
       @logger.warn(progname) { "Attempted to delete #{rr.inspect} from empty rrset." }
       []
       #:nocov:
-    elsif rrset == [rr]
+    elsif rrset.reject { |er| er.value == rr.value }.empty?
       [change_for("DELETE", rrset)]
     else
       [change_for("DELETE", rrset), change_for("CREATE", rrset.reject { |er| er.value == rr.value })]

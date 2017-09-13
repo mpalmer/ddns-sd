@@ -5,8 +5,8 @@ module ExampleGroupMethods
     let(:logger) { instance_double(Logger, 'mock') }
 
     before(:each) do
-      allow(logger).to receive(:debug)
-      allow(logger).to receive(:info)
+      allow(logger).to receive(:debug).with(instance_of(String))
+      allow(logger).to receive(:info).with(instance_of(String))
     end
   end
 end

@@ -7,10 +7,12 @@ describe DDNSSD::System do
   uses_logger
 
   let(:base_env) do
-    { "DDNSSD_HOSTNAME"        => "speccy",
+    {
+      "DDNSSD_HOSTNAME"        => "speccy",
       "DDNSSD_BASE_DOMAIN"     => "example.com",
       "DDNSSD_BACKEND"         => "test_queue",
-      "DDNSSD_HOST_IP_ADDRESS" => "192.0.2.42"
+      "DDNSSD_HOST_IP_ADDRESS" => "192.0.2.42",
+      "DOCKER_HOST"            => "unix:///var/run/test.sock",
     }
   end
   let(:env) { base_env }
@@ -61,22 +63,33 @@ describe DDNSSD::System do
   end
 
   describe "#run" do
+    before(:each) do
+      # Stub this out for now, since reconcile_containers has its own tests
+      allow(system).to receive(:reconcile_containers).and_return(nil)
+    end
+
     context "initialization" do
       it "creates a queue" do
-        expect(Queue).to receive(:new)
-
         system.run
+
+        expect(Queue).to have_received(:new)
       end
 
       it "listens on the queue" do
-        expect(mock_queue).to receive(:pop)
-
         system.run
+
+        expect(mock_queue).to have_received(:pop)
       end
 
       it "fires up a docker watcher" do
-        expect(DDNSSD::DockerWatcher).to receive(:new).with(queue: mock_queue, config: instance_of(DDNSSD::Config))
-        expect(mock_watcher).to receive(:run!)
+        system.run
+
+        expect(DDNSSD::DockerWatcher).to have_received(:new).with(queue: mock_queue, config: instance_of(DDNSSD::Config))
+        expect(mock_watcher).to have_received(:run!)
+      end
+
+      it "reconciles containers" do
+        expect(system).to receive(:reconcile_containers)
 
         system.run
       end
@@ -94,114 +107,90 @@ describe DDNSSD::System do
       end
     end
 
-    describe ":containers message" do
+    describe "processing message" do
+      let(:mock_conn) { instance_double(Docker::Connection) }
+      let(:docker_container) { container_fixture("published_port80") }
+      let(:ddnssd_container) { instance_double(DDNSSD::Container) }
+
       before(:each) do
-        expect(mock_backend).to receive(:dns_records).and_return(dns_records)
-        expect(mock_queue).to receive(:pop).and_return([:containers, containers])
-        allow(mock_backend).to receive(:publish_record)
+        # This one's for the container_fixture calls
+        allow(Docker::Connection).to receive(:new).with("unix:///", {}).and_call_original
+        # This is the real one
+        allow(Docker::Connection).to receive(:new).with("unix:///var/run/test.sock", {}).and_return(mock_conn)
+
+        allow(Docker::Container).to receive(:get).with("asdfasdfpub80", {}, mock_conn).and_return(docker_container)
+        allow(DDNSSD::Container).to receive(:new).with(docker_container, system.config).and_return(ddnssd_container)
       end
-
-      context "when there's a new container" do
-        let(:dns_records) { dns_record_fixtures("exposed_port80", "other_machine") + [DDNSSD::DNSRecord.new("example.com", 60, :NS, "ns1.example.com")] }
-        let(:containers) { container_fixtures("exposed_port80", "published_port80").map { |dc| DDNSSD::Container.new(dc, system.config) } }
-
-        it "adds records for the new container" do
-          dns_record_fixture("published_port80").each do |rr|
-            expect(mock_backend).to receive(:publish_record).with(eq(rr)).ordered
-          end
-
-          system.run
-        end
-
-        it "publishes the host's IP address" do
-          expect(mock_backend).to receive(:publish_record).with(DDNSSD::DNSRecord.new("speccy.example.com", 60, :A, "192.0.2.42"))
-
-          system.run
-        end
-      end
-
-      context "when a container has been removed" do
-        let(:dns_records) { dns_record_fixtures("exposed_port80", "published_port80", "other_machine") }
-        let(:containers) { container_fixtures("published_port80").map { |dc| DDNSSD::Container.new(dc, system.config) } }
-
-        it "removes the records from the removed container" do
-          dns_record_fixture("exposed_port80").each do |rr|
-            next if [Resolv::DNS::Resource::IN::TXT, Resolv::DNS::Resource::IN::PTR].include?(rr.data.class)
-
-            expect(mock_backend).to receive(:suppress_record).with(eq(rr))
-          end
-
-          system.run
-        end
-      end
-
-      context "when a container has changed" do
-        let(:dns_records) { dns_record_fixtures("published_port80") }
-        let(:containers) do
-          docker_container = container_fixture("published_port80")
-          docker_container.info["NetworkSettings"]["Ports"]["80/tcp"].first["HostPort"] = "1337"
-
-          [DDNSSD::Container.new(docker_container, system.config)]
-        end
-
-        it "removes the obsolete record and adds a new one" do
-          expect(mock_backend)
-            .to receive(:suppress_record)
-            .with(eq(DDNSSD::DNSRecord.new("pub80._http._tcp.example.com", 60, :SRV, 0, 0, 8080, "speccy.example.com")))
-          expect(mock_backend)
-            .to receive(:publish_record)
-            .with(eq(DDNSSD::DNSRecord.new("pub80._http._tcp.example.com", 60, :SRV, 0, 0, 1337, "speccy.example.com")))
-
-          system.run
-        end
-      end
-
-      context "when DDNSSD_RECORD_TTL has changed" do
-        let(:env) { base_env.merge("DDNSSD_RECORD_TTL" => "42") }
-        let(:dns_records) { dns_record_fixtures("published_port80") }
-        let(:containers) { container_fixtures("published_port80").map { |dc| DDNSSD::Container.new(dc, system.config) } }
-
-        it "removes the records with the wrong TTL and adds new ones with the right TTL" do
-          dns_record_fixture("published_port80").each do |rr|
-            next if [Resolv::DNS::Resource::IN::TXT, Resolv::DNS::Resource::IN::PTR].include?(rr.data.class)
-
-            expect(mock_backend).to receive(:suppress_record).with(eq(rr))
-          end
-
-          dns_record_fixture("published_port80").each do |rr|
-            rr.instance_variable_set(:@ttl, 42)
-            expect(mock_backend).to receive(:publish_record).with(eq(rr))
-          end
-
-          system.run
-        end
-      end
-    end
-
-    describe "message processing" do
-      let(:a_record) { DDNSSD::DNSRecord.new("a.example.com", 60, :A, "192.0.2.42") }
-      let(:srv_record) { DDNSSD::DNSRecord.new("srv.example.com", 60, :SRV, 0, 0, 80, "a.example.com") }
-      let(:ptr_record) { DDNSSD::DNSRecord.new("ptr.example.com", 60, :PTR, "srv.example.com") }
-      let(:container) { Struct.new(:dns_records).new([a_record, srv_record, ptr_record]) }
 
       describe ":started" do
-        it "tells the backend there are some new DNS records" do
-          expect(mock_queue).to receive(:pop).and_return([:started, container])
-
-          expect(mock_backend).to receive(:publish_record).with(a_record).ordered
-          expect(mock_backend).to receive(:publish_record).with(srv_record).ordered
-          expect(mock_backend).to receive(:publish_record).with(ptr_record).ordered
+        it "tells the container to go publish itself" do
+          expect(mock_queue).to receive(:pop).and_return([:started, "asdfasdfpub80"])
+          expect(ddnssd_container).to receive(:publish_records).with(mock_backend)
 
           system.run
         end
       end
 
       describe ":stopped" do
-        it "tells the backend to remove some records in reverse order" do
-          expect(mock_queue).to receive(:pop).and_return([:stopped, container])
+        it "records that the container was requested to stop" do
+          system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
 
-          expect(mock_backend).to receive(:suppress_record).with(srv_record).ordered
-          expect(mock_backend).to receive(:suppress_record).with(a_record).ordered
+          expect(mock_queue).to receive(:pop).and_return([:stopped, "asdfasdfpub80"])
+          expect(ddnssd_container).to receive(:stopped=).with(true)
+
+          system.run
+        end
+      end
+
+      describe ":died" do
+        before(:each) do
+          allow(ddnssd_container).to receive(:stopped).and_return(false)
+        end
+
+        context "with normal exit status" do
+          it "tells the container to go suppress itself" do
+            system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
+
+            expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 0])
+            expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
+
+            system.run
+          end
+        end
+
+        context "with abnormal exit status" do
+          it "does not suppress records" do
+            system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
+
+            expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 42])
+            expect(ddnssd_container).to_not receive(:suppress_records)
+            expect(logger).to receive(:warn).with("DDNSSD::System")
+
+            system.run
+          end
+        end
+
+        context "with abnormal exit status after being stopped" do
+          it "suppresses records" do
+            expect(ddnssd_container).to receive(:stopped).and_return(true)
+
+            system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
+
+            expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 42])
+            expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
+
+            system.run
+          end
+        end
+      end
+
+      describe ":suppress_all" do
+        it "suppresses records from all containers, as well as 'shared' records" do
+          system.instance_variable_get(:@containers)["asdfasdpub80"] = ddnssd_container
+          expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
+          expect(mock_backend).to receive(:suppress_shared_records)
+
+          expect(mock_queue).to receive(:pop).and_return([:suppress_all])
 
           system.run
         end
@@ -215,6 +204,125 @@ describe DDNSSD::System do
         expect(logger).to receive(:error)
 
         system.run
+      end
+    end
+  end
+
+  describe "#reconcile_containers" do
+    let(:mock_conn) { instance_double(Docker::Connection) }
+    let(:docker_containers) { [] }
+    let(:dns_records) { [] }
+
+    before(:each) do
+      # This one's for the container_fixture calls
+      allow(Docker::Connection).to receive(:new).with("unix:///", {}).and_call_original
+      # This is the real one
+      allow(Docker::Connection).to receive(:new).with("unix:///var/run/test.sock", {}).and_return(mock_conn)
+
+      allow(Docker::Container).to receive(:all).with({}, mock_conn).and_return(docker_containers)
+      allow(Docker::Container).to receive(:get).with("asdfasdfpub80", {}, mock_conn).and_return(container_fixture("published_port80"))
+      allow(Docker::Container).to receive(:get).with("asdfasdfexposed80", {}, mock_conn).and_return(container_fixture("exposed_port80"))
+
+      expect(mock_backend).to receive(:dns_records).and_return(dns_records)
+      allow(mock_backend).to receive(:publish_record)
+    end
+
+    it "requests a current container list" do
+      system.send(:reconcile_containers)
+
+      expect(Docker::Container).to have_received(:all).with({}, mock_conn)
+    end
+
+    it "doesn't include containers that disappear between the all and the get" do
+      expect(Docker::Container).to receive(:all).with({}, mock_conn).and_return(container_fixtures("published_port80", "published_port22", "exposed_port80"))
+      expect(Docker::Container).to receive(:get).with("asdfasdfpub80", {}, mock_conn)
+      expect(Docker::Container).to receive(:get).with("asdfasdfpub22", {}, mock_conn).and_raise(Docker::Error::NotFoundError)
+      expect(Docker::Container).to receive(:get).with("asdfasdfexposed80", {}, mock_conn)
+
+      system.send(:reconcile_containers)
+
+      expect(system.instance_variable_get(:@containers).keys.sort).to eq(["asdfasdfexposed80", "asdfasdfpub80"])
+    end
+
+    context "when there's a new container" do
+      let(:dns_records) { dns_record_fixtures("exposed_port80", "other_machine") + [DDNSSD::DNSRecord.new("example.com", 60, :NS, "ns1.example.com")] }
+      let(:docker_containers) { container_fixtures("exposed_port80", "published_port80") }
+
+      it "adds records for the new container" do
+        dns_record_fixture("published_port80").each do |rr|
+          expect(mock_backend).to receive(:publish_record).with(eq(rr)).ordered
+        end
+
+        system.send(:reconcile_containers)
+      end
+
+      it "publishes the host's IP address" do
+        expect(mock_backend).to receive(:publish_record).with(DDNSSD::DNSRecord.new("speccy.example.com", 60, :A, "192.0.2.42"))
+
+        system.send(:reconcile_containers)
+      end
+    end
+
+    context "when a container has been removed" do
+      let(:dns_records) { dns_record_fixtures("exposed_port80", "published_port80", "other_machine") }
+      let(:docker_containers) { container_fixtures("published_port80") }
+
+      it "removes the records from the removed container" do
+        dns_record_fixture("exposed_port80").each do |rr|
+          next if [Resolv::DNS::Resource::IN::TXT, Resolv::DNS::Resource::IN::PTR].include?(rr.data.class)
+
+          expect(mock_backend).to receive(:suppress_record).with(eq(rr))
+        end
+
+        system.send(:reconcile_containers)
+      end
+    end
+
+    context "when a container has changed" do
+      let(:dns_records) { dns_record_fixtures("published_port80") }
+      let(:docker_containers) { container_fixtures("published_port80") }
+
+      before(:each) do
+        dc = container_fixture("published_port80")
+        dc.info["NetworkSettings"]["Ports"]["80/tcp"].first["HostPort"] = "1337"
+
+        allow(Docker::Container).to receive(:get).with("asdfasdfpub80", {}, mock_conn).and_return(dc)
+      end
+
+      it "removes the obsolete record and adds a new one" do
+        # There are TXT and PTR records that will be published, that we don't
+        # care so much about
+        allow(mock_backend).to receive(:publish_record).with(any_args)
+
+        expect(mock_backend)
+          .to receive(:suppress_record)
+          .with(eq(DDNSSD::DNSRecord.new("pub80._http._tcp.example.com", 60, :SRV, 0, 0, 8080, "speccy.example.com")))
+        expect(mock_backend)
+          .to receive(:publish_record)
+          .with(eq(DDNSSD::DNSRecord.new("pub80._http._tcp.example.com", 60, :SRV, 0, 0, 1337, "speccy.example.com")))
+
+        system.send(:reconcile_containers)
+      end
+    end
+
+    context "when DDNSSD_RECORD_TTL has changed" do
+      let(:env) { base_env.merge("DDNSSD_RECORD_TTL" => "42") }
+      let(:dns_records) { dns_record_fixtures("published_port80") }
+      let(:docker_containers) { container_fixtures("published_port80").map { |dc| DDNSSD::Container.new(dc, system.config) } }
+
+      it "removes the records with the wrong TTL and adds new ones with the right TTL" do
+        dns_record_fixture("published_port80").each do |rr|
+          next if [Resolv::DNS::Resource::IN::TXT, Resolv::DNS::Resource::IN::PTR].include?(rr.data.class)
+
+          expect(mock_backend).to receive(:suppress_record).with(eq(rr))
+        end
+
+        dns_record_fixture("published_port80").each do |rr|
+          rr.instance_variable_set(:@ttl, 42)
+          expect(mock_backend).to receive(:publish_record).with(eq(rr))
+        end
+
+        system.send(:reconcile_containers)
       end
     end
   end

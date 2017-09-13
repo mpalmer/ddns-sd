@@ -22,11 +22,12 @@ module DDNSSD
     #   detected with the environment variables found.
     #
     def initialize(env, logger:)
-      @config = DDNSSD::Config.new(env, logger: logger)
-      @logger = logger
-      @backend = @config.backend_class.new(@config)
-      @queue = Queue.new
-      @watcher = DDNSSD::DockerWatcher.new(queue: @queue, config: @config)
+      @config     = DDNSSD::Config.new(env, logger: logger)
+      @logger     = logger
+      @backend    = @config.backend_class.new(@config)
+      @queue      = Queue.new
+      @watcher    = DDNSSD::DockerWatcher.new(queue: @queue, config: @config)
+      @containers = {}
     end
 
     def run
@@ -39,30 +40,49 @@ module DDNSSD
         @metrics_server.run
       end
 
+      reconcile_containers
+
       loop do
         item = @queue.pop
         @logger.debug(progname) { "Received message #{item.inspect}" }
 
-        break if item == [:terminate]
-
         case (item.first rescue nil)
-        when :containers
-          reconcile_containers(item.last)
         when :started
-          item.last.dns_records.each { |rr| @backend.publish_record(rr) }
+          @containers[item.last] = DDNSSD::Container.new(Docker::Container.get(item.last, {}, docker_connection), @config)
+          @containers[item.last].publish_records(@backend)
         when :stopped
-          item.last.dns_records.reverse.each do |rr|
-            unless rr.type == :PTR || rr.type == :TXT
-              @backend.suppress_record(rr)
-            end
+          @containers[item.last].stopped = true
+        when :died
+          _, id, exitcode = item
+          if exitcode == 0 || @containers[id].stopped
+            @containers[id].suppress_records(@backend)
+          else
+            @logger.warn(progname) { "Container #{id} did not stop cleanly (exitcode #{exitcode}); not suppressing records" }
           end
+
+          @containers.delete(id)
+        when :suppress_all
+          @logger.info(progname) { "Withdrawing all DNS records..." }
+          @containers.values.each do |c|
+            @logger.debug(progname) { "Withdrawing records for container #{c.id}" }
+            c.suppress_records(@backend)
+          end
+          @logger.debug(progname) { "Suppressing common records" }
+          @backend.suppress_shared_records
+          @logger.info(progname) { "Withdrawal complete." }
+        when :terminate
+          @logger.info(progname) { "Terminating." }
+          break
         else
           @logger.error(progname) { "SHOULDN'T HAPPEN: docker watcher sent an unrecognized message: #{item.inspect}.  This is a bug, please report it." }
         end
       end
     end
 
-    def shutdown
+    def shutdown(suppress_records = true)
+      @logger.debug(progname) { "Received shutdown request, suppress_records = #{suppress_records.inspect}" }
+
+      @queue.push([:suppress_all]) if suppress_records
       @queue.push([:terminate])
       @watcher.shutdown
       @metrics_server.shutdown if @metrics_server
@@ -74,8 +94,12 @@ module DDNSSD
       "DDNSSD::System"
     end
 
-    def reconcile_containers(containers)
+    def reconcile_containers
       @logger.info(progname) { "Reconciling DNS records with container services" }
+
+      populate_container_cache
+
+      containers = @containers.values
 
       our_live_records = @backend.dns_records.select { |rr| our_record?(rr) }
       our_desired_records = containers.map { |c| c.dns_records }.flatten(1)
@@ -89,14 +113,9 @@ module DDNSSD
       @logger.info(progname) { "Should have #{our_desired_records.length} DNS records." }
       @logger.debug(progname) { (["Desired DNS records:"] + our_desired_records.map { |rr| "#{rr.name} #{rr.ttl} #{rr.type} #{rr.value}" }).join("\n  ") } unless our_desired_records.empty?
 
-      @logger.info(progname) { "Deleting #{(our_live_records - our_desired_records).length} DNS records." }
-
       # Delete any of "our" records that are no longer needed
-      (our_live_records - our_desired_records).reject do |rr|
-        # We never manually delete PTR and TXT records; the backend will
-        # clean them up as-and-when required
-        rr.data.is_a?(Resolv::DNS::Resource::IN::PTR) || rr.data.is_a?(Resolv::DNS::Resource::IN::TXT)
-      end.each { |rr| @backend.suppress_record(rr) }
+      @logger.info(progname) { "Deleting #{(our_live_records - our_desired_records).length} DNS records." }
+      (our_live_records - our_desired_records).each { |rr| @backend.suppress_record(rr) }
 
       # ... and create any new records we need
       @logger.info(progname) { "Creating #{(our_desired_records - our_live_records).uniq.length} DNS records." }
@@ -112,12 +131,40 @@ module DDNSSD
       when Resolv::DNS::Resource::IN::SRV
         rr.data.target.to_s =~ suffix
       when Resolv::DNS::Resource::IN::PTR, Resolv::DNS::Resource::IN::TXT
-        # Everyone shares ownership of TXT and PTR records
+        # Everyone shares ownership of TXT and PTR records.  By saying we
+        # don't "own" any particular DNS record, we won't delete it, but
+        # will re-create it on start.  This is OK by me.
         false
       else
-        # If I don't know what it is, I ain't touchin' it!
+        # Mystery record types are best not claimed.
         false
       end
+    end
+
+    def populate_container_cache
+      @containers = {}
+
+      # Docker's `.all` method returns wildly different data in each
+      # container's `.info` structure to what `.get` returns (the API endpoints
+      # have completely different schemas), and the `.all` response is missing
+      # something things we rather want, so to get everything we need, this
+      # individual enumeration is unfortunately necessary -- and, of course,
+      # because a container can cease to exist between when we get the list and
+      # when we request it again, it all gets far more complicated than it
+      # should need to be.
+      #
+      # Thanks, Docker!
+      Docker::Container.all({}, docker_connection).each do |c|
+        begin
+          @containers[c.id] = DDNSSD::Container.new(Docker::Container.get(c.id, {}, docker_connection), @config)
+        rescue Docker::Error::NotFoundError
+          nil
+        end
+      end
+    end
+
+    def docker_connection
+      @docker_connection ||= Docker::Connection.new(@config.docker_host, {})
     end
 
     def register_start_time_metric

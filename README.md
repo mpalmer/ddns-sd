@@ -8,6 +8,30 @@ it is often used in concert with [Multicast DNS
 regular DNS services, and that is how it is usually used in a Docker-based
 system.
 
+
+# How it Works
+
+On startup, `ddns-sd` looks for DNS records that refer to the local machine
+and its containers, and compares those against the records that should exist
+based on the current set of running containers.  It creates and removes
+records as required, to make the DNS align with the running containers.
+
+After that, when containers are started and stopped, DNS records are created
+or removed, as necessary, to reflect the containers that are in service.  If
+a container stops unexpectedly (that is, it terminates with a non-zero exit
+code, and was not stopped by explicit request), then the DNS records are not
+removed, so that monitoring systems can detect that the container should
+still exist, and alerts can be raised.
+
+When `ddns-sd` itself is stopped (via the `TERM` signal, the default when
+you ask to shutdown a container via `docker stop`) it removes all the DNS
+records it manages, on the assumption that we may be shutting down the
+machine, and all services should be deregistered.  If you know you're only
+doing a restart, you can send the `SIGHUP` signal instead (via `docker kill
+-s HUP ddns-sd`), and this will cause `ddns-sd` to leave all the DNS records
+in place when it exits.
+
+
 # Running
 
 As you would expect from something that manages Docker containers, it is
@@ -491,6 +515,12 @@ the following signals to control the running service:
 * **`USR2`**: Decrease the verbosity of logging, `DEBUG` -> `INFO` -> `WARN`
   -> `ERROR`.  Errors are always logged.
 
+* **`TERM`**: Terminate gracefully, withdrawing all DNS records for
+  containers on the host.
+
+* **`HUP`**: Terminate with intent to restart.  No DNS records are
+  withdrawn.
+
 
 # Instrumentation
 
@@ -593,8 +623,9 @@ aren't changing).
 * **`ddnssd_docker_event_total`**: How many events have been seen by
   `ddns-sd`.  Separated out by a `type` label, which is either `"started"`
   (container was started, and we should have created some DNS records),
-  `"stopped"` (container was stopped, and we should have deleted some DNS
-  records), or `"ignored"` (the event wasn't pertinent to `ddns-sd`).
+  `"stopped"` (container was stopped, and we *probably* should have deleted
+  some DNS records), or `"ignored"` (the event wasn't pertinent to
+  `ddns-sd`).
 
 * **`ddnssd_docker_event_exceptions_total`**: How many exceptions have been
   raised while handling events, labelled by the exception `class`.  This

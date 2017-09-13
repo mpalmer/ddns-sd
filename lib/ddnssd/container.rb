@@ -4,6 +4,8 @@ module DDNSSD
   class Container
     attr_reader :id, :name, :ipv4_address, :ipv6_address
 
+    attr_accessor :stopped
+
     def initialize(docker_data, system_config)
       @id = docker_data.id
 
@@ -48,6 +50,14 @@ module DDNSSD
       end.tap do |v|
         @logger.debug(progname) { "host_address_for(#{spec.inspect}) => #{v.inspect}" }
       end
+    end
+
+    def publish_records(backend)
+      dns_records.each { |rr| backend.publish_record(rr) }
+    end
+
+    def suppress_records(backend)
+      dns_records.each { |rr| backend.suppress_record(rr) unless %i{TXT PTR}.include?(rr.type) }
     end
 
     private

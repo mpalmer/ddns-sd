@@ -41,7 +41,7 @@ module DDNSSD
         "#{@data.priority} #{@data.weight} #{@data.port} #{@data.target}"
       else
         raise RuntimeError,
-          "Unknown RR type, can't convert to value"
+          "Unknown RR type #{@type.inspect}, can't convert to value"
       end
     end
 

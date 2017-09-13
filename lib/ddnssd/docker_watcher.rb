@@ -24,28 +24,11 @@ module DDNSSD
     end
 
     def run
-      # So, you're going to love this... Docker::Event is a chunked-encoding
-      # never-ending shitstream, and Docker gets really upset if you try to
-      # send another request at it when its trying to stream events at you.
-      # That's fair enough.  BUT, Excon caches file descriptors on a
-      # per-Unix-socket basis, across all `Excon::Connection` objects, which
-      # causes other requests made while `/events` response is still "in
-      # progress" to be sent down THE SAME CONNECTION, causing everything to
-      # explode.  Everything goes to shit, and the only indication of this is
-      # that Excon raises an IOError exception.
-      #
-      # Instead, the only option is to turn off thread-safe socket caching in
-      # Excon, which works in Docker::Connection because it creates a new Excon
-      # connection on *every* request (which normally would be derpy as fuck,
-      # but it saves our bacon this time).
-      #
-      # Bug report at https://github.com/excon/excon/issues/640.
-      @conn = Docker::Connection.new(@docker_host, read_timeout: 3600, thread_safe_sockets: false)
-
-      refresh_containers
+      @last_event_time = Time.now.to_i
+      @conn = Docker::Connection.new(@docker_host, read_timeout: 3600)
 
       begin
-        loop { process_event }
+        loop { process_events }
       rescue Docker::Error::TimeoutError
         retry
       rescue Excon::Error::Socket => ex
@@ -95,34 +78,7 @@ module DDNSSD
       @logger_progname ||= "DDNSSD::DockerWatcher(#{@docker_host.inspect})"
     end
 
-    def refresh_containers
-      @logger.info(progname) { "Refreshing all container data" }
-      @last_event_time = Time.now.to_i
-
-      @containers = {}
-
-      # Docker's `.all` method returns wildly different data in each
-      # container's `.info` structure to what `.get` returns (the API endpoints
-      # have completely different schemas), and the `.all` response is missing
-      # something things we rather want, so to get everything we need, this
-      # individual enumeration is unfortunately necessary -- and, of course,
-      # because a container can cease to exist between when we get the list and
-      # when we request it again, it all gets far more complicated than it
-      # should need to be.
-      #
-      # Thanks, Docker!
-      Docker::Container.all({}, @conn).each do |c|
-        begin
-          @containers[c.id] = DDNSSD::Container.new(Docker::Container.get(c.id, {}, @conn), @config)
-        rescue Docker::Error::NotFoundError
-          nil
-        end
-      end.compact
-
-      @queue.push([:containers, @containers.values])
-    end
-
-    def process_event
+    def process_events
       @logger.debug(progname) { "Asking for events since #{@last_event_time}" }
       pe_start = Time.now.to_f
 
@@ -135,10 +91,12 @@ module DDNSSD
 
         queue_item = if event.Action == "start"
           @event_count.increment(type: "started")
-          [:started, @containers[event.ID] = DDNSSD::Container.new(Docker::Container.get(event.ID, {}, @conn), @config)]
-        elsif event.Action == "die" && @containers[event.ID]
+          [:started, event.ID]
+        elsif event.Action == "kill"
+          [:stopped, event.ID]
+        elsif event.Action == "die"
           @event_count.increment(type: "stopped")
-          [:stopped, @containers[event.ID]]
+          [:died, event.ID, event.Actor.Attributes["exitCode"].to_i]
         else
           @event_count.increment(type: "ignored")
           nil

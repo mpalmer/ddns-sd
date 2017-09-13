@@ -15,6 +15,8 @@ module DDNSSD
       @logger = @config.logger
 
       @request_stats = Frankenstein::Request.new(:ddnssd_backend, description: "DNS backend", registry: @config.metrics_registry)
+
+      @shared_records = {}
     end
 
     def dns_records
@@ -52,7 +54,16 @@ module DDNSSD
         @logger.debug(progname) { "Suppressing record #{rr.name} #{rr.ttl} #{rr.type} #{rr.value}" }
 
         case rr.type
-        when :A, :AAAA, :CNAME
+        when :A
+          if rr.name =~ /\A(\d+-\d+-\d+-\d+\.)?[^.]+\.#{Regexp.quote(@config.base_domain)}\z/
+            # This record represents an IPv4 address that is (or could be) shared
+            # amongst many machines; that means we can't remove it now, in case
+            # it's used elsewhere.  We'll defer this for another time
+            @shared_records[rr] = true
+          else
+            remove_record(rr)
+          end
+        when :AAAA, :CNAME
           remove_record(rr)
         when :SRV
           remove_srv_record(rr)
@@ -72,6 +83,16 @@ module DDNSSD
         (["Error while suppressing record #{rr.inspect}: #{ex.message} (#{ex.class})"] + ex.backtrace).join("\n  ")
       end
       #:nocov:
+    end
+
+    def suppress_shared_records
+      @shared_records.keys.each { |rr| remove_record(rr) }
+    end
+
+    private
+
+    def progname
+      self.class.to_s
     end
   end
 end

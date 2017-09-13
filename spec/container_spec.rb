@@ -193,4 +193,40 @@ describe DDNSSD::Container do
       end
     end
   end
+
+  describe "#publish_records" do
+    let(:mock_backend) { instance_double(DDNSSD::Backend) }
+
+    it "doesn't do anything interesting without services" do
+      expect(mock_backend).to_not receive(:publish_record)
+
+      DDNSSD::Container.new(container_fixture("basic_container"), config).publish_records(mock_backend)
+    end
+
+    it "publishes records if the container has them" do
+      dns_record_fixture("published_port80").each do |rr|
+        expect(mock_backend).to receive(:publish_record).with(rr)
+      end
+
+      DDNSSD::Container.new(container_fixture("published_port80"), config).publish_records(mock_backend)
+    end
+  end
+
+  describe "#suppress_records" do
+    let(:mock_backend) { instance_double(DDNSSD::Backend) }
+
+    it "doesn't do anything interesting without services" do
+      expect(mock_backend).to_not receive(:suppress_record)
+
+      DDNSSD::Container.new(container_fixture("basic_container"), config).suppress_records(mock_backend)
+    end
+
+    it "suppresses records if the container has them" do
+      dns_record_fixture("published_port80").each do |rr|
+        expect(mock_backend).to receive(:suppress_record).with(rr) unless %i{TXT PTR}.include?(rr.type)
+      end
+
+      DDNSSD::Container.new(container_fixture("published_port80"), config).suppress_records(mock_backend)
+    end
+  end
 end

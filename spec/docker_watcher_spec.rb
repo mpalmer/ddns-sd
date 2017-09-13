@@ -8,8 +8,14 @@ require 'ddnssd/docker_watcher'
 describe DDNSSD::DockerWatcher do
   uses_logger
 
-  def test_event(type: "container", action:, id:, time: 987654321)
-    Docker::Event.new(Type: type, Action: action, id: id, time: time)
+  def test_event(type: "container", action:, id:, time: 987654321, exitCode: nil)
+    actor = if exitCode
+      Docker::Event::Actor.new(ID: id, Attributes: { "exitCode" => exitCode.to_s })
+    else
+      Docker::Event::Actor.new(ID: id)
+    end
+
+    Docker::Event.new(Type: type, Action: action, id: id, time: time, Actor: actor)
   end
 
   let(:env) do
@@ -32,62 +38,22 @@ describe DDNSSD::DockerWatcher do
   end
 
   describe "#run" do
-    let(:containers) { container_fixtures("published_port80") }
-
     let(:mock_conn) { instance_double(Docker::Connection) }
 
     before(:each) do
-      # This one's for the container_fixture calls
-      allow(Docker::Connection).to receive(:new).with("unix:///", {}).and_call_original
-      # This is the real one
-      allow(Docker::Connection).to receive(:new).with("unix:///var/run/test.sock", thread_safe_sockets: false, read_timeout: 3600).and_return(mock_conn)
+      allow(Docker::Connection).to receive(:new).with("unix:///var/run/test.sock", read_timeout: 3600).and_return(mock_conn)
 
       # I'm a bit miffed we have to do this; to my mind, a double should
       # lie a little
       allow(mock_conn).to receive(:is_a?).with(Docker::Connection).and_return(true)
       allow(Docker::Event).to receive(:since).and_raise(DDNSSD::DockerWatcher::Terminate)
-      allow(Docker::Container).to receive(:all).with({}, mock_conn).and_return(containers)
-      allow(Docker::Container).to receive(:get).with("asdfasdfpub80", {}, mock_conn).and_return(container_fixture("published_port80"))
-      allow(Time).to receive(:now).and_return(Time.at(1234567890))
+      allow(Time).to receive(:now).and_return(1234567890)
     end
 
     it "connects to the specified socket with a long read timeout" do
       watcher.run
 
-      expect(Docker::Connection).to have_received(:new).with("unix:///var/run/test.sock", read_timeout: 3600, thread_safe_sockets: false)
-    end
-
-    it "requests a current container list" do
-      watcher.run
-
-      expect(Docker::Container).to have_received(:all).with({}, mock_conn)
-    end
-
-    it "sends a list of all containers to the queue" do
-      watcher.run
-
-      expect(queue.length).to eq(1)
-      item = queue.pop
-
-      expect(item.first).to eq(:containers)
-      expect(item.last).to be_an(Array)
-      expect(item.last.first).to be_a(DDNSSD::Container)
-    end
-
-    it "doesn't send back containers that disappear between the all and the get" do
-      expect(Docker::Container).to receive(:all).with({}, mock_conn).and_return(container_fixtures("published_port80", "published_port22", "exposed_port80"))
-      expect(Docker::Container).to receive(:get).with("asdfasdfpub80", {}, mock_conn).and_return(container_fixture("published_port80"))
-      expect(Docker::Container).to receive(:get).with("asdfasdfpub22", {}, mock_conn).and_raise(Docker::Error::NotFoundError)
-      expect(Docker::Container).to receive(:get).with("asdfasdfexposed80", {}, mock_conn).and_return(container_fixture("exposed_port80"))
-
-      watcher.run
-      expect(queue.length).to eq(1)
-      item = queue.pop
-
-      expect(item.first).to be(:containers)
-
-      expect(item.last.length).to eq(2)
-      expect(item.last.all? { |i| i.port_exposed?("80/tcp") }).to be(true)
+      expect(Docker::Connection).to have_received(:new).with("unix:///var/run/test.sock", read_timeout: 3600)
     end
 
     it "watches for events since the startup time" do
@@ -98,32 +64,37 @@ describe DDNSSD::DockerWatcher do
 
     it "emits a started event when a container is started" do
       expect(Docker::Event).to receive(:since).with(1234567890, {}, mock_conn).and_yield(test_event(action: "start", id: "asdfasdfpub80"))
-      expect(Docker::Container).to receive(:get).with("asdfasdfpub80", {}, mock_conn).and_return(container_fixture("published_port80"))
 
       watcher.run
 
-      expect(queue.length).to eq(2)
-      queue.pop
+      expect(queue.length).to eq(1)
       item = queue.pop
 
       expect(item.first).to eq(:started)
-      expect(item.last).to be_a(DDNSSD::Container)
-      expect(item.last.name).to eq("pub80")
+      expect(item.last).to eq("asdfasdfpub80")
     end
 
-    it "emits a stopped when a container dies" do
-      expect(Docker::Event).to receive(:since).with(1234567890, {}, mock_conn).and_yield(test_event(action: "die", id: "asdfasdfpub80"))
+    it "emits a stopped when a container is deliberately stopped" do
+      expect(Docker::Event).to receive(:since).with(1234567890, {}, mock_conn).and_yield(test_event(action: "kill", id: "asdfasdfpub80"))
 
-      watcher.instance_variable_set(:@containers, "asdfasdfpub80" => :not_a_container)
       watcher.run
 
-      expect(queue.length).to eq(2)
-      queue.pop
+      expect(queue.length).to eq(1)
       item = queue.pop
 
       expect(item.first).to eq(:stopped)
-      expect(item.last).to be_a(DDNSSD::Container)
-      expect(item.last.name).to eq("pub80")
+      expect(item.last).to eq("asdfasdfpub80")
+    end
+
+    it "emits a died, with an exit code, when a container fails to proceed" do
+      expect(Docker::Event).to receive(:since).with(1234567890, {}, mock_conn).and_yield(test_event(action: "die", id: "asdfasdfpub80", exitCode: 42))
+
+      watcher.run
+
+      expect(queue.length).to eq(1)
+      item = queue.pop
+
+      expect(item).to eq([:died, "asdfasdfpub80", 42])
     end
 
     it "ignores uninteresting events" do
@@ -131,7 +102,7 @@ describe DDNSSD::DockerWatcher do
 
       watcher.run
 
-      expect(queue.length).to eq(1)
+      expect(queue.length).to eq(0)
     end
 
     it "continues where it left off after timeout" do

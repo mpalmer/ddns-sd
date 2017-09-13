@@ -14,16 +14,49 @@ else
   logger.formatter = ->(s, t, p, m) { "#{t.strftime("%Y-%m-%d %H:%M:%S")} #{s[0]} #{p} #{m}\n" }
 end
 
+sig_r, sig_w = IO.pipe
+
 Signal.trap("USR1") do
-  logger.level -= 1 unless logger.level == Logger::DEBUG
+  sig_w.print '1'
 end
 
 Signal.trap("USR2") do
-  logger.level += 1 unless logger.level == Logger::ERROR
+  sig_w.print '2'
+end
+
+Signal.trap("TERM") do
+  sig_w.print 'T'
+end
+
+Signal.trap("HUP") do
+  sig_w.print 'H'
 end
 
 begin
-  DDNSSD::System.new(ENV, logger: logger).run
+  system = DDNSSD::System.new(ENV, logger: logger)
+
+  Thread.new do
+    loop do
+      c = sig_r.getc
+      if c == 'T'
+        logger.info($0) { "Received SIGTERM." }
+        system.shutdown(true)
+      elsif c == 'H'
+        logger.info($0) { "Received SIGHUP." }
+        system.shutdown(false)
+      elsif c == '1'
+        logger.level -= 1 unless logger.level == Logger::DEBUG
+        logger.info($0) { "Received SIGUSR1; log level is now #{Logger::SEV_LABEL[logger.level]}." }
+      elsif c == '2'
+        logger.level += 1 unless logger.level == Logger::ERROR
+        logger.info($0) { "Received SIGUSR2; log level is now #{Logger::SEV_LABEL[logger.level]}." }
+      else
+        logger.error($0) { "Got an unrecognised character from signal pipe: #{c.inspect}" }
+      end
+    end
+  end
+
+  system.run
 rescue DDNSSD::Config::InvalidEnvironmentError => ex
   $stderr.puts "F Invalid configuration: #{ex.message}"
   exit 1

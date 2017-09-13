@@ -1,10 +1,10 @@
 - name: zomg.someone-else.example.com
-  type: A
+  type: :A
   ttl: 60
   data:
   - 192.0.2.123
 - name: pub80._http._tcp.example.com
-  type: SRV
+  type: :SRV
   ttl: 60
   data:
   - 0
