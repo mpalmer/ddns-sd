@@ -247,6 +247,9 @@ be different to that above, covered in the below sections:
 
 * To register a different service instance, see "Custom instance names".
 
+* If you need to register multiple instances of a single service on one
+  container, see "Registering multiple instance of a service".
+
 * To vary the SRV record parameters, see "SRV record parameters".
 
 * If you'd like [the `TXT` metadata
@@ -261,14 +264,6 @@ be different to that above, covered in the below sections:
 
 * Finally, if you're using port publishing (because your container IP
   addresses aren't routable), see "Registering published ports".
-
-At present, you can only register one port for a given service on a single
-container.  If that becomes necessary in the future, the plan is to start
-associating multiple ports using numeric label sequences, like
-`org.discourse.service._<service>.0.port`, `....1.port`, and so on.  If you
-need this functionality, please submit a well-tested and -documented pull
-request.
-
 
 ## Custom instance names
 
@@ -286,6 +281,27 @@ shortest practical sequence of letters, numbers, and hyphens (if for no
 other reason than we can't guarantee that every DNS backend will behave in a
 standards-compliant manner in the face of unexpected input), but the spec
 lets you do it, so we will too.
+
+
+## Registering multiple instances of a service
+
+In some fairly uncommon cases, you may need to register multiple instances of
+a service (on different ports) for the same container.  In that case, you
+can use a numeric identifier after the service name to differentiate between
+the different instances, like so:
+
+    org.discourse.service._<service>.0.port     = "8080"
+    org.discourse.service._<service>.0.instance = "foo"
+    org.discourse.service._<service>.1.port     = "9090"
+    org.discourse.service._<service>.1.instance = "bar"
+
+This will register a SRV record for `foo._<service>._tcp.<domain>` on port
+8080, and another SRV record for `bar._<service>._tcp.<domain>` on port
+9090.
+
+There is nothing special about "port" and "instance" in the example above;
+any other per-service label you need (as described in later sections) can
+also be applied with this numeric association pattern.
 
 
 ## Registering non-TCP services

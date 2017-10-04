@@ -72,15 +72,15 @@ module DDNSSD
       end.map do |lbl, val|
         [lbl.sub(/\Aorg\.discourse\.service\./, ''), val]
       end.each_with_object(Hash.new { |h, k| h[k] = {} }) do |(lbl, val), h|
-        svcname, sublabel = lbl.split('.', 2)
-        h[svcname][sublabel] = val
-      end.map do |svc, labels|
-        unless svc[0] == "_"
-          @logger.error(progname) { "Label org.discourse.service.#{svc}... ignored.  Service names must begin with an underscore." }
-          next nil
+        if lbl =~ /\A_([^.]+(?:\.\d+)?)\.(.*)\z/
+          h[$1][$2] = val
+        else
+          @logger.warn(progname) { "Ignoring invalid label org.discourse.service.#{lbl}." }
         end
-
-        DDNSSD::ServiceInstance.new(svc[1..-1], labels, self, @config)
+      end.map do |svc, labels|
+        # Strip off any numeric suffix
+        svcname = svc.split('.', 2).first
+        DDNSSD::ServiceInstance.new(svcname, labels, self, @config)
       end.compact
     end
   end

@@ -130,6 +130,16 @@ describe DDNSSD::Container do
     end
   end
 
+  context "exposed-port container with multiple instances of the same service" do
+    let(:container_name) { "exposed_port_multiple_instances" }
+
+    describe "#dns_records" do
+      it "returns a DNS record set" do
+        expect(container.dns_records).to eq(dns_record_fixtures("exposed_port_multiple_instances"))
+      end
+    end
+  end
+
   context "published-port container with no labels" do
     let(:container_name) { "published_port22" }
 
@@ -179,15 +189,15 @@ describe DDNSSD::Container do
       end
     end
 
-    before(:each) { allow(logger).to receive(:error) }
+    before(:each) { allow(logger).to receive(:warn) }
 
     describe "#dns_records" do
       it "returns no records" do
         expect(container.dns_records).to be_empty
       end
 
-      it "logs an error" do
-        expect(logger).to receive(:error)
+      it "logs a warning" do
+        expect(logger).to receive(:warn)
 
         container.dns_records
       end
