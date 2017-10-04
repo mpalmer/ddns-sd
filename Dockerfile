@@ -22,7 +22,7 @@ COPY bin/* /usr/local/bin/
 COPY lib/ /usr/local/lib/ruby/2.3.0/
 
 EXPOSE 9218
-LABEL org.discourse.service._prom-exp.port=9218 org.discourse.service._promex.instance=ddns-sd
+LABEL org.discourse.service._prom-exp.port=9218 org.discourse.service._prom-exp.instance=ddns-sd
 
 USER ddnssd
 WORKDIR /home/ddnssd
