@@ -1,0 +1,8 @@
+Name: host_port80
+Config:
+  Labels:
+    org.discourse.service._http.port: "80"
+NetworkSettings:
+  Networks:
+    host: {}
+id: host_port80

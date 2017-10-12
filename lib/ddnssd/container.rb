@@ -2,7 +2,7 @@ require 'ddnssd/service_instance'
 
 module DDNSSD
   class Container
-    attr_reader :id, :name, :ipv4_address, :ipv6_address
+    attr_reader :id, :name, :ipv4_address, :ipv6_address, :host_network
 
     attr_accessor :stopped
 
@@ -13,13 +13,24 @@ module DDNSSD
       @logger = @config.logger
 
       @name = (docker_data.info["Name"] || docker_data.info["Names"].first).sub(/\A\//, '')
-      @ipv4_address = docker_data.info["NetworkSettings"]["IPAddress"]
-      @ipv6_address = docker_data.info["NetworkSettings"]["GlobalIPv6Address"]
-
-      @exposed_ports   = docker_data.info["Config"]["ExposedPorts"] || {}
-      @published_ports = docker_data.info["NetworkSettings"]["Ports"]
 
       @service_instances = parse_service_instances(docker_data.info["Config"]["Labels"])
+
+      networks = docker_data.info["NetworkSettings"]["Networks"]
+
+      @host_network = !!(networks && networks["host"])
+
+      if @host_network
+        @ipv4_address = nil
+        @ipv6_address = nil
+        @exposed_ports = nil
+        @published_ports = nil
+      else
+        @ipv4_address = docker_data.info["NetworkSettings"]["IPAddress"]
+        @ipv6_address = docker_data.info["NetworkSettings"]["GlobalIPv6Address"]
+        @exposed_ports   = docker_data.info["Config"]["ExposedPorts"] || {}
+        @published_ports = docker_data.info["NetworkSettings"]["Ports"]
+      end
     end
 
     def short_id
@@ -31,12 +42,16 @@ module DDNSSD
     end
 
     def port_exposed?(spec)
-      !@exposed_ports[spec].nil?
+      @host_network || !@exposed_ports[spec].nil?
     end
 
     def host_port_for(spec)
-      (@published_ports[spec].first["HostPort"] rescue nil).tap do |v|
-        @logger.debug(progname) { "host_port_for(#{spec.inspect}) => #{v.inspect}" }
+      if @host_network
+        spec.split("/")[0].to_i
+      else
+        (@published_ports[spec].first["HostPort"] rescue nil).tap do |v|
+          @logger.debug(progname) { "host_port_for(#{spec.inspect}) => #{v.inspect}" }
+        end
       end
     end
 
@@ -77,10 +92,10 @@ module DDNSSD
         else
           @logger.warn(progname) { "Ignoring invalid label org.discourse.service.#{lbl}." }
         end
-      end.map do |svc, labels|
+      end.map do |svc, lbls|
         # Strip off any numeric suffix
         svcname = svc.split('.', 2).first
-        DDNSSD::ServiceInstance.new(svcname, labels, self, @config)
+        DDNSSD::ServiceInstance.new(svcname, lbls, self, @config)
       end.compact
     end
   end

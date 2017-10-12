@@ -17,6 +17,10 @@ module DDNSSD
       @data = Resolv::DNS::Resource::IN.const_get(type).new(*data)
     end
 
+    def to_s
+      "#{@name} #{@type} #{@ttl} #{@data}"
+    end
+
     def raw_name
       @name
     end

@@ -74,6 +74,28 @@ describe DDNSSD::Container do
     end
   end
 
+  context "net host with exposed port 80" do
+    let(:container_name) { "host_port80" }
+
+    describe "#port_exposed?" do
+      it "lists the port as exposed" do
+        expect(container.port_exposed?("80/tcp")).to be(true)
+      end
+    end
+
+    describe "#host_port_for" do
+      it "just echos any host for" do
+        expect(container.host_port_for("666/tcp")).to be(666)
+      end
+    end
+
+    describe "#dns_records" do
+      it "returns a correct DNS record set" do
+        expect(container.dns_records).to eq(dns_record_fixtures("host_port80"))
+      end
+    end
+  end
+
   context "exposed-port container with single label set" do
     let(:container_name) { "exposed_port80" }
 

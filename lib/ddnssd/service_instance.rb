@@ -55,7 +55,9 @@ module DDNSSD
     end
 
     def instance_address_fqdn
-      if @container.host_port_for("#{@labels["port"]}/#{protos.first}")
+      if @container.host_network
+        host_fqdn
+      elsif @container.host_port_for("#{@labels["port"]}/#{protos.first}")
         if @container.host_address_for("#{@labels["port"]}/#{protos.first}")
           address_fqdn
         else
@@ -131,7 +133,7 @@ module DDNSSD
     end
 
     def a_records
-      if instance_v4_address
+      if !@container.host_network && instance_v4_address
         [DDNSSD::DNSRecord.new(instance_address_fqdn, @config.record_ttl, :A, instance_v4_address)]
       else
         []
@@ -139,7 +141,10 @@ module DDNSSD
     end
 
     def aaaa_records
-      if @container.host_port_for("#{@labels["port"]}/#{protos.first}") || @container.ipv6_address.nil? || @container.ipv6_address.empty?
+      if  @container.host_network ||
+          @container.host_port_for("#{@labels["port"]}/#{protos.first}") ||
+          @container.ipv6_address.nil? ||
+          @container.ipv6_address.empty?
         []
       else
 
@@ -172,7 +177,14 @@ module DDNSSD
       protos.map do |proto|
         port = @container.host_port_for("#{@labels["port"]}/#{proto}") || @labels["port"]
 
-        DDNSSD::DNSRecord.new(srv_instance_fqdn(proto), @config.record_ttl, :SRV, priority, weight, port.to_i, instance_address_fqdn)
+        DDNSSD::DNSRecord.new(srv_instance_fqdn(proto),
+            @config.record_ttl,
+            :SRV,
+            priority,
+            weight,
+            port.to_i,
+            instance_address_fqdn
+        )
       end
     end
 
