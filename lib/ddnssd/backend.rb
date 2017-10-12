@@ -59,6 +59,7 @@ module DDNSSD
             # This record represents an IPv4 address that is (or could be) shared
             # amongst many machines; that means we can't remove it now, in case
             # it's used elsewhere.  We'll defer this for another time
+            @logger.debug(progname) { "Detected #{rr.name} as a shared record" }
             @shared_records[rr] = true
           else
             remove_record(rr)
