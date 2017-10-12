@@ -207,6 +207,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
     begin
       tries_left -= 1
       changes = change_to_remove_record_from_set(@record_cache.get(rr.name, rr.type), rr)
+      @logger.debug(progname) { "change_to_remove_record_from_set => #{changes.inspect}" }
       do_change(*changes) unless changes.empty?
       @record_cache.remove(rr)
       @logger.debug(progname) { "<- remove_record(#{rr.inspect})" }
