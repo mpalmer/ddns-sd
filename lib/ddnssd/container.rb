@@ -16,9 +16,8 @@ module DDNSSD
 
       @service_instances = parse_service_instances(docker_data.info["Config"]["Labels"])
 
-      networks = docker_data.info["NetworkSettings"]["Networks"]
-
-      @host_network = !!(networks && networks["host"])
+      host_config = docker_data.info["HostConfig"]
+      @host_network = !!(host_config && (host_config["NetworkMode"]&.downcase == "host"))
 
       if @host_network
         @ipv4_address = nil

@@ -6,3 +6,5 @@ NetworkSettings:
   Networks:
     host: {}
 id: host_port80
+HostConfig:
+  NetworkMode: "host"
