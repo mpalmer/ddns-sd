@@ -272,4 +272,10 @@ describe DDNSSD::Config do
       end
     end
   end
+
+  describe "#host_dns_record" do
+    it "is nil if there's no host IP address" do
+      expect(config.host_dns_record).to be(nil)
+    end
+  end
 end

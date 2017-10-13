@@ -118,17 +118,20 @@ describe DDNSSD::Backend do
   end
 
   describe "#suppress_shared_records" do
-    before(:each) { allow(mock_config).to receive(:base_domain).and_return("example.com") }
+    before(:each) do
+      allow(mock_config).to receive(:base_domain).and_return("example.com")
+      allow(mock_config).to receive(:host_dns_record).and_return(DDNSSD::DNSRecord.new("foo.example.com", 60, :A, "192.0.2.42"))
+    end
 
     it "calls remove_record on the host's IPv4 address" do
-      rr = DDNSSD::DNSRecord.new("foo.example.com", 60, :A, "192.0.2.42")
+      host_rr = DDNSSD::DNSRecord.new("foo.example.com", 60, :A, "192.0.2.42")
 
-      expect(backend).to receive(:remove_record).with(rr)
-      backend.suppress_record(rr)
+      expect(mock_config).to receive(:host_dns_record).and_return(host_rr)
+      expect(backend).to receive(:suppress_record).with(host_rr)
       backend.suppress_shared_records
     end
 
-    it "calls remove_record on a shared IP address record" do
+    it "calls remove_record on a shared IP address record when removal was previously attempted" do
       rr = DDNSSD::DNSRecord.new("192-0-2-42.foo.example.com", 60, :A, "192.0.2.42")
 
       expect(backend).to receive(:remove_record).with(rr)

@@ -88,6 +88,12 @@ describe DDNSSD::System do
         expect(mock_watcher).to have_received(:run!)
       end
 
+      it "publishes the host's IP address" do
+        expect(mock_backend).to receive(:publish_record).with(DDNSSD::DNSRecord.new("speccy.example.com", 60, :A, "192.0.2.42"))
+
+        system.run
+      end
+
       it "reconciles containers" do
         expect(system).to receive(:reconcile_containers)
 
@@ -252,12 +258,6 @@ describe DDNSSD::System do
         dns_record_fixture("published_port80").each do |rr|
           expect(mock_backend).to receive(:publish_record).with(eq(rr)).ordered
         end
-
-        system.send(:reconcile_containers)
-      end
-
-      it "publishes the host's IP address" do
-        expect(mock_backend).to receive(:publish_record).with(DDNSSD::DNSRecord.new("speccy.example.com", 60, :A, "192.0.2.42"))
 
         system.send(:reconcile_containers)
       end

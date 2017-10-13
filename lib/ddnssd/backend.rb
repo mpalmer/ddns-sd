@@ -88,6 +88,9 @@ module DDNSSD
 
     def suppress_shared_records
       @shared_records.keys.each { |rr| remove_record(rr) }
+      if @config.host_dns_record
+        suppress_record(@config.host_dns_record)
+      end
     end
 
     private

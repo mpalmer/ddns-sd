@@ -40,6 +40,10 @@ module DDNSSD
         @metrics_server.run
       end
 
+      if @config.host_dns_record
+        @backend.publish_record(@config.host_dns_record)
+      end
+
       reconcile_containers
 
       loop do
@@ -103,10 +107,6 @@ module DDNSSD
 
       our_live_records = @backend.dns_records.select { |rr| our_record?(rr) }
       our_desired_records = containers.map { |c| c.dns_records }.flatten(1)
-
-      if @config.host_ip_address
-        our_desired_records.unshift(DDNSSD::DNSRecord.new("#{@config.hostname}.#{@config.base_domain}", @config.record_ttl, :A, @config.host_ip_address))
-      end
 
       @logger.info(progname) { "Found #{our_live_records.length} relevant DNS records." }
       @logger.debug(progname) { (["Relevant DNS records:"] + our_live_records.map { |rr| "#{rr.name} #{rr.ttl} #{rr.type} #{rr.value}" }).join("\n  ") } unless our_live_records.empty?
