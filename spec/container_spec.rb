@@ -49,6 +49,12 @@ describe DDNSSD::Container do
       end
     end
 
+    describe "#addressable?" do
+      it "is true" do
+        expect(container.addressable?).to be true
+      end
+    end
+
     describe "#dns_records" do
       it "returns no DNS records" do
         expect(container.dns_records).to be_empty
@@ -222,6 +228,16 @@ describe DDNSSD::Container do
         expect(logger).to receive(:warn)
 
         container.dns_records
+      end
+    end
+  end
+
+  context "stopped container" do
+    let(:docker_data) { container_fixture("stopped_container") }
+
+    describe "#addressable?" do
+      it "is false" do
+        expect(container.addressable?).to be false
       end
     end
   end

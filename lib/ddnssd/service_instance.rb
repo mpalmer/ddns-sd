@@ -14,6 +14,11 @@ module DDNSSD
     end
 
     def dns_records
+      unless @container.addressable?
+        @logger.debug(progname) { "Container #{@container.name} does not have IP addresses; not creating DNS records for service #{@name}" }
+        return []
+      end
+
       begin
         protos.each do |proto|
           unless @container.port_exposed?("#{@labels["port"]}/#{proto}")

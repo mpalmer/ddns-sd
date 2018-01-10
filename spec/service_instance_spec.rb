@@ -157,6 +157,14 @@ describe DDNSSD::ServiceInstance do
 
         it_behaves_like "a service instance error"
       end
+
+      context "with a stopped container" do
+        let(:docker_container) { container_fixture("stopped_container") }
+
+        it "doesn't have any DNS records" do
+          expect(result).to eq([])
+        end
+      end
     end
 
     context "with an instance label" do

@@ -44,6 +44,10 @@ module DDNSSD
       @host_network || !@exposed_ports[spec].nil?
     end
 
+    def addressable?
+      @host_network || @ipv4_address != "" || @ipv6_address != ""
+    end
+
     def host_port_for(spec)
       if @host_network
         spec.split("/")[0].to_i

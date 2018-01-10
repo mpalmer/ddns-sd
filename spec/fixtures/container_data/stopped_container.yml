@@ -1,0 +1,14 @@
+Name: stopped80
+Config:
+  Labels:
+    org.discourse.service._http.port: '80'
+  ExposedPorts:
+    80/tcp: {}
+    80/udp: {}
+NetworkSettings:
+  Ports: {}
+  Gateway: ""
+  GlobalIPv6Address: ""
+  IPAddress: ""
+id: asdfasdfstopped80
+
