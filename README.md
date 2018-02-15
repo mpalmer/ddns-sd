@@ -382,16 +382,17 @@ as the service instance.  There are no specific rules for the interpretation
 of this data, beyond some simple [key-value
 semantics](https://tools.ietf.org/html/rfc6763#section-6.3).
 
-To set a `TXT` record for a service registration,
-you must set sub-labels of `org.discourse.service._<service>.tags`,
-where the remaining portion of the label is the key, and the label's value
-is the value of the attribute.  For example, if you wanted to set keys
-`foo=bar` and `baz=wombat`, you would set the following labels:
+To set a `TXT` record for a service registration, you must set sub-labels of
+`org.discourse.service._<service>.tag`, where the portion of the label after
+`..._<service>.tag.` is the key, and the label's value is the value of the
+attribute.  For example, if you wanted to set keys `foo=bar` and
+`baz=wombat`, you would set the following labels:
 
 * `org.discourse.service._<service>.tag.foo = bar`
 * `org.discourse.service._<service>.tag.baz = wombat`
 
-If you wish to set any "Attribute present, with no value" tags, use the
+Leaving the value of the label blank indicates an empty value.  If you wish
+to set any "Attribute present, with no value" tags, use the
 `org.discourse.service._<service>.tags` label, where each tag name is
 separated by a newline (`0x0a`).
 
