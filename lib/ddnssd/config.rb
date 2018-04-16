@@ -112,7 +112,7 @@ module DDNSSD
         true
       else
         raise InvalidEnvironmentError,
-          "Value for #{key} (#{env[key].inspect}) is not a valid hostname"
+          "Value for #{key} (#{env[key].inspect}) is not a valid boolean value"
       end
     end
 
