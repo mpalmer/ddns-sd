@@ -1,0 +1,101 @@
+[
+  {
+    "properties": {
+      "TTL": 172800,
+      "NSRecords": [
+        {
+          "nsdname": "ns1-05.azure-dns.com."
+        },
+        {
+          "nsdname": "ns2-05.azure-dns.net."
+        },
+        {
+          "nsdname": "ns3-05.azure-dns.org."
+        },
+        {
+          "nsdname": "ns4-05.azure-dns.info."
+        }
+      ]
+    }
+  },
+  {
+    "properties": {
+      "TTL": 3600,
+      "SOARecord": {
+        "host": "ns1-05.azure-dns.com.",
+        "email": "azuredns-hostmaster.microsoft.com",
+        "serialNumber": 1,
+        "refreshTime": 3600,
+        "retryTime": 300,
+        "expireTime": 2419200,
+        "minimumTTL": 300
+      }
+    }
+  },
+  {
+    "properties": {
+      "TTL": 3600,
+      "ARecords": [
+        {
+          "ipv4Address": "10.0.0.1"
+        },
+        {
+          "ipv4Address": "10.0.0.2"
+        }
+      ]
+    }
+  },
+  {
+    "properties": {
+      "TTL": 3600,
+      "CNAMERecord": {
+        "cname": "example.com"
+      }
+    }
+  },
+  {
+    "properties": {
+      "TTL": 3600,
+      "PTRRecords": [
+        {
+          "ptrdname": "example.com"
+        }
+      ]
+    }
+  },
+  {
+    "properties": {
+      "TTL": 3600,
+      "SRVRecords": [
+        {
+          "priority": 1,
+          "weight": 1,
+          "port": 8080,
+          "target": "example.com"
+        }
+      ]
+    }
+  },
+  {
+    "properties": {
+      "TTL": 3600,
+      "TXTRecords": [
+        {
+          "value": [
+            "testexample"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "properties": {
+      "TTL": 3600,
+      "AAAARecords": [
+        {
+          "ipv6Address": "::1"
+        }
+      ]
+    }
+  }
+]
