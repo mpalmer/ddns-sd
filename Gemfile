@@ -3,6 +3,7 @@ ruby '> 2.3', '< 2.5'
 source 'https://rubygems.org'
 
 gem 'aws-sdk', '~> 2.10'
+gem 'azure_mgmt_dns', '~> 0.16'
 gem 'docker-api', '~> 1.33'
 # See https://github.com/swipely/docker-api/issues/409
 gem 'excon', '~> 0.59'
