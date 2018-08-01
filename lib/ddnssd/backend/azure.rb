@@ -185,7 +185,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
     def all_resource_record_sets
       res = @client.record_sets.list_by_dns_zone(@resource_group_name, @zone_name)
-      res.resource_record_sets.each { |rrset| yield rrset }
+      res.each { |rrset| yield rrset }
 
     rescue StandardError => ex
       @logger.error(progname) { (["Error while enumerating all_resource_record_sets: #{ex.message} (#{ex.class})"] + ex.backtrace).join("  \n") }
