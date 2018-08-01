@@ -266,7 +266,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       existing_records = @record_cache.get(rr.name, rr.type)
 
       if existing_records.empty?
-        create [rr]
+        update [rr]
       else
         update (existing_records + [rr]).uniq
       end
