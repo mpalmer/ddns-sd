@@ -31,13 +31,93 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     end
   end
 
+  module RecordSetHelper
+    def get_records_from_record_set(rrset)
+      case rrset.type
+      when "A" then rrset.arecords.map { |r| r.ipv4address }
+      when "AAAA" then rrset.aaaa_records.map { |r| r.ipv6address }
+      when "MX" then rrset.mx_records.map { |r| "#{ r.preference } #{ r.exchange }" }
+      when "NS" then rrset.ns_records.map { |r| r.nsdname }
+      when "PTR" then rrset.ptr_records.map { |r| r.ptrdname }
+      when "SRV" then rrset.srv_records.map { |r| "#{ r.priority } #{ r.weight } #{ r.port } #{ r.target }" }
+      when "TXT" then rrset.txt_records.map { |r| r.value }
+      when "CNAME" then rrset.cname_record.map { |r| r.cname }
+      when "SOA" then rrset.soa_record.map { |r| "#{ r.host } #{ r.email } #{ r.serial_number } #{ r.refresh_time } #{ r.retry_time } #{ r.expire_time } #{ r.minimum_ttl }" }
+      when "CAA" then rrset.caa_records.map { |r| "#{ r.flags } #{ r.tag } #{ r.value }" }
+      end
+    end
+
+    def add_records_to_set(rrset, records)
+      case records.first.type.to_s
+      when "A" then rrset.arecords = records.map { |r|
+                      ar = ARecord.new
+                      ar.ipv4address = r.value
+                      ar }
+      when "AAAA" then rrset.aaaa_records = records.map { |r|
+                         ar = AaaaRecord.new
+                         ar.ipv6address = r.value
+                         ar  }
+      when "MX" then rrset.mx_records = records.map { |r|
+                       v = r.value.split(" ")
+                       ar = MxRecord.new
+                       ar.preference = v[0]
+                       ar.exchange = v[1]
+                       ar }
+      when "NS" then rrset.ns_records = records.map { |r|
+                       ar = NsRecord.new
+                       ar.nsdname = r.value
+                       ar }
+      when "PTR" then rrset.ptr_records = records.map { |r|
+                        ar = PtrRecord.new
+                        ar.ptrdname = r.value
+                        ar }
+      when "SRV" then rrset.srv_records = records.map { |r|
+                        v = r.value.split(" ")
+                        ar = SrvRecord.new
+                        ar.priority = v[0]
+                        ar.weight = v[1]
+                        ar.port = v[2]
+                        ar.target = v[3]
+                        ar }
+      when "TXT" then rrset.txt_records = records.map { |r|
+                        ar = TxtRecord.new
+                        ar.value = r.value
+                        ar }
+      when "CNAME" then rrset.cname_record = records.map { |r|
+                          ar = CnameRecord.new
+                          ar.cname = r.value
+                          ar }
+      when "SOA" then rrset.soa_record = records.map { |r|
+                        v = r.value.split(" ")
+                        ar = SoaRecord.new
+                        ar.host = v[0]
+                        ar.email = v[1]
+                        ar.serial_number = v[2]
+                        ar.refresh_time = v[3]
+                        ar.retry_time = v[4]
+                        ar.expire_time = v[5]
+                        ar.minimum_ttl = v[6]
+                        ar }
+      when "CAA" then rrset.caa_records = records.map { |r|
+                        v = r.value.split(" ")
+                        ar = CaaRecord.new
+                        ar.flags = v[0]
+                        ar.tag = v[1]
+                        ar.value = v[2]
+                        ar }
+      end
+    end
+  end
+
   include Retryable
+  include RecordSetHelper
 
   class RecordCache
     include Retryable
+    include RecordSetHelper
 
-    def initialize(client, resource_group_id, zone_name, logger)
-      @client, @resource_group_id, @zone_name, @logger = client, resource_group_id, zone_name, logger
+    def initialize(client, resource_group_name, zone_name, logger)
+      @client, @resource_group_name, @zone_name, @logger = client, resource_group_name, zone_name, logger
 
       blank_cache
     end
@@ -72,7 +152,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
     def refresh(name, type)
       rrset = retryable do
-        @client.record_sets.get(@resource_group_id, @zone_name, name, type)
+        @client.record_sets.get(@resource_group_name, @zone_name, name, type)
       end
 
       if rrset
@@ -95,7 +175,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     end
 
     def all_resource_record_sets
-      res = @client.record_sets.list_by_dns_zone(@resource_group_id, @zone_name)
+      res = @client.record_sets.list_by_dns_zone(@resource_group_name, @zone_name)
       res.resource_record_sets.each { |rrset| yield rrset }
 
     rescue StandardError => ex
@@ -113,36 +193,21 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
         DDNSSD::DNSRecord.new(rrset.name.chomp("."), rrset.ttl, rrset.type.to_sym, *rrdata)
       end
     end
-
-    def get_records_from_record_set(rrset)
-      case rrset.type
-      when "A" then rrset.arecords.map { |r| r.ipv4address }
-      when "AAAA" then rrset.aaaa_records.map { |r| r.ipv6address }
-      when "MX" then rrset.srv_records.map { |r| "#{ r.preference } #{ r.exchange }" }
-      when "NS" then rrset.ns_records.map { |r| r.nsdname }
-      when "PTR" then rrset.ptr_records.map { |r| r.ptrdname }
-      when "SRV" then rrset.srv_records.map { |r| "#{ r.priority } #{ r.weight } #{ r.port } #{ r.target }" }
-      when "TXT" then rrset.txt_records.map { |r| r.value }
-      when "CNAME" then rrset.cname_record.map { |r| r.cname }
-      when "SOA" then rrset.soa_record.map { |r| "#{ r.host } #{ r.email } #{ r.serial_number } #{ r.refresh_time } #{ r.retry_time } #{ r.expire_time } #{ r.minimum_ttl }" }
-      when "CAA" then rrset.caa_reords.map { |r| "#{ r.flags } #{ r.tag } #{ r.value }" }
-      end
-    end
   end
 
   def initialize(config)
     super
 
     @zone_name = config.backend_config["ZONE_NAME"]
-    @resource_group_id = config.backend_config["RESOURCE_GROUP_ID"]
+    @resource_group_name = config.backend_config["RESOURCE_GROUP_NAME"]
 
     if @zone_name.nil? || @zone_name.empty?
       raise DDNSSD::Config::InvalidEnvironmentError,
             "DDNSSD_AZURE_ZONE_NAME cannot be empty or missing"
     end
-    if @resource_group_id.nil? || @resource_group_id.empty?
+    if @resource_group_name.nil? || @resource_group_name.empty?
       raise DDNSSD::Config::InvalidEnvironmentError,
-            "DDNSSD_AZURE_RESOURCE_GROUP_ID cannot be empty or missing"
+            "DDNSSD_AZURE_RESOURCE_GROUP_NAME cannot be empty or missing"
     end
 
     # TODO: how do we pass an access token to the running docker instance??
@@ -154,7 +219,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
     @azure_client = DnsManagementClient.new(credentials)
 
-    @record_cache = RecordCache.new(@azure_client, @resource_group_id, @zone_name, @logger)
+    @record_cache = RecordCache.new(@azure_client, @resource_group_name, @zone_name, @logger)
   end
 
   def dns_records
@@ -173,7 +238,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
   def set_record(rr)
     @logger.debug(progname) { "-> set_record(#{rr.inspect})" }
-    do_change(change_for("UPSERT", [rr]))
+    do_change(change_for("UPDATE", [rr]))
     @record_cache.set(rr)
     @logger.debug(progname) { "<- set_record(#{rr.inspect})" }
   end
@@ -191,7 +256,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       changes = if existing_records.empty?
         [change_for("CREATE", [rr])]
       else
-        [change_for("DELETE", existing_records), change_for("CREATE", (existing_records + [rr]).uniq)]
+        [change_for("UPDATE", (existing_records + [rr]).uniq)]
       end
 
       do_change(*changes)
@@ -330,7 +395,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     elsif rrset.reject { |er| er.value == rr.value }.empty?
       [change_for("DELETE", rrset)]
     else
-      [change_for("DELETE", rrset), change_for("CREATE", rrset.reject { |er| er.value == rr.value })]
+      [change_for("UPDATE", rrset.reject { |er| er.value == rr.value })]
     end
   end
 
@@ -358,5 +423,19 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
         resource_records: rrset.map { |rr| { value: rr.value } }
       }
     }
+  end
+
+  def update(records)
+    r = records.first
+    record_set = RecordSet.new
+    record_set.ttl = r.ttl
+    record_set.name = r.name
+    record_set.type = r.type.to_s
+    @client.record_sets.create_or_update(@resource_group_name, @zone_name, r.name, r.type.to_s)
+  end
+
+  def delete(records)
+    r = records.first
+    @client.record_sets.delete(@resource_group_name, @zone_name, r.name, r.type.to_s)
   end
 end
