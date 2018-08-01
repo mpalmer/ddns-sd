@@ -94,7 +94,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar }
       when "TXT" then rrset.txt_records = records.map { |r|
                         ar = TxtRecord.new
-                        ar.value = Shellwords.shellwords(r.value)
+                        ar.value = Shellwords.shellwords(r.value).reject { |v| v.empty? }
                         ar }
       when "CNAME" then rrset.cname_record = records.map { |r|
                           ar = CnameRecord.new
