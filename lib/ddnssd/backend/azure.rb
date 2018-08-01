@@ -61,7 +61,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       rrset.type = r.type.to_s
       @logger.debug("converting to azure records of type: #{rrset.type}")
       @logger.debug("converting to azure records list: #{records.inspect}")
-      case records.first.type.to_s
+      case r.type.to_s
       when "A" then rrset.arecords = records.map { |r|
                       ar = ARecord.new
                       ar.ipv4address = r.value
@@ -122,7 +122,11 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar }
       end
       @logger.debug("rrset after azurifying: #{rrset.inspect}")
-      rrset
+      if r.type.to_s == "TXT"
+        rrset.txt_records
+      else
+        rrset
+      end
     end
   end
 
@@ -410,26 +414,9 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     end
   end
 
-  def update_txt(records)
-    #r = records.first
-    #records = get_azure_recordset_format(records)
-    txt = TxtRecord.new
-    txt.value = [""]
-    rs = RecordSet.new
-    rs.ttl = 3600
-    rs.txt_records = [txt]
-    rs.name = "docker-monitor._prom-exp._tcp"
-    rs.type = "TXT"
-    @client.record_sets.create_or_update(@resource_group_name, @zone_name,  "docker-monitor._prom-exp._tcp", "TXT", rs)
-  end
-
   def update(records)
     r = records.first
     records = get_azure_recordset_format(records)
-    if r.type == "TXT"
-      update_txt records
-      return
-    end
     @client.record_sets.create_or_update(@resource_group_name, @zone_name, r.name, r.type, records)
   end
 
