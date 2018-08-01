@@ -274,6 +274,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       @record_cache.add(rr)
       @logger.debug(progname) { "<- add_record(#{rr.inspect})" }
     rescue StandardError => ex
+      @logger.debug(ex.backtrace)
       if tries_left > 0
         @logger.debug(progname) { "Received InvalidChangeBatch; refreshing record set for #{rr.name} #{rr.type}" }
 
