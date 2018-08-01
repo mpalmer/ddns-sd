@@ -56,7 +56,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       r = records.first
       rrset = RecordSet.new
       rrset.ttl = r.ttl
-      rrset.name = r.name
+      rrset.name = r.name.sub(Regexp.new(".#{@zone_name}"), "")
       rrset.type = r.type.to_s
       @logger.debug("converting to azure records of type: #{rrset.type}")
       case records.first.type.to_s
@@ -210,14 +210,10 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
   def initialize(config)
     super
 
-    @zone_name = config.backend_config["ZONE_NAME"]
+    @zone_name = config.base_domain
     @resource_group_name = config.backend_config["RESOURCE_GROUP_NAME"]
     @access_token = config.backend_config["ACCESS_TOKEN"]
 
-    if @zone_name.nil? || @zone_name.empty?
-      raise DDNSSD::Config::InvalidEnvironmentError,
-            "DDNSSD_AZURE_ZONE_NAME cannot be empty or missing"
-    end
     if @resource_group_name.nil? || @resource_group_name.empty?
       raise DDNSSD::Config::InvalidEnvironmentError,
             "DDNSSD_AZURE_RESOURCE_GROUP_NAME cannot be empty or missing"
