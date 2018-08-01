@@ -226,12 +226,10 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     account = JSON.parse(@access_token)
     credentials = MsRest::TokenCredentials.new(account["accessToken"])
 
-    client = DnsManagementClient.new(credentials)
-    client.subscription_id = account["subscription"]
+    @client = DnsManagementClient.new(credentials)
+    @client.subscription_id = account["subscription"]
 
-    @azure_client = DnsManagementClient.new(credentials)
-
-    @record_cache = RecordCache.new(@azure_client, @resource_group_name, @zone_name, @logger)
+    @record_cache = RecordCache.new(@client, @resource_group_name, @zone_name, @logger)
   end
 
   def dns_records
