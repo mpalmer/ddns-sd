@@ -94,7 +94,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar }
       when "TXT" then rrset.txt_records = records.map { |r|
                         ar = TxtRecord.new
-                        ar.value = r.data.strings.reject { |v| v.empty? }
+                        ar.value = r.data.strings
                         @logger.debug("txt record value: #{ar.value.inspect}")
                         @logger.debug("records: #{ar.inspect}")
                         ar }
@@ -411,8 +411,9 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
   end
 
   def update(records)
+    r = records.first
     records = get_azure_recordset_format(records)
-    @client.record_sets.create_or_update(@resource_group_name, @zone_name, records.name, records.type, records)
+    @client.record_sets.create_or_update(@resource_group_name, @zone_name, r.name, r.type, records)
   end
 
   def delete(records)
