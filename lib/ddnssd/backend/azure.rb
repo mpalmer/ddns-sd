@@ -410,9 +410,26 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     end
   end
 
+  def update_txt(records)
+    #r = records.first
+    #records = get_azure_recordset_format(records)
+    txt = TxtRecord.new
+    txt.value = [""]
+    rs = RecordSet.new
+    rs.ttl = 3600
+    rs.txt_records = [txt]
+    rs.name = "docker-monitor._prom-exp._tcp"
+    rs.type = "TXT"
+    @client.record_sets.create_or_update(@resource_group_name, @zone_name,  "docker-monitor._prom-exp._tcp", "TXT", rs)
+  end
+
   def update(records)
     r = records.first
     records = get_azure_recordset_format(records)
+    if r.type == "TXT"
+      update_txt records
+      return
+    end
     @client.record_sets.create_or_update(@resource_group_name, @zone_name, r.name, r.type, records)
   end
 
