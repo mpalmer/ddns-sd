@@ -114,6 +114,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar.value = v[2]
                         ar }
       end
+      rrset
     end
   end
 
