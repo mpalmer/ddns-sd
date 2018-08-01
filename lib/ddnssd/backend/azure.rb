@@ -6,6 +6,9 @@ require 'ddnssd/config'
 require 'ddnssd/dns_record'
 require 'ddnssd/error'
 
+include Azure::Dns::Mgmt::V2018_03_01_preview
+include Azure::Dns::Mgmt::V2018_03_01_preview::Models
+
 class DDNSSD::Backend::Azure < DDNSSD::Backend
   class RetryError < DDNSSD::Error; end
   class InvalidChangeRequest < DDNSSD::Error; end
