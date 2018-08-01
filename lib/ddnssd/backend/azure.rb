@@ -39,16 +39,16 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       @logger.debug("converting from azure records of type: #{rrset.type}")
       @logger.debug("converting from azure records list: #{rrset.inspect}")
       case rrset.type
-      when "Microsoft.Network/dnszones/A" then rrset.arecords.map { |r| r.ipv4address }
-      when "Microsoft.Network/dnszones/AAAA" then rrset.aaaa_records.map { |r| r.ipv6address }
-      when "Microsoft.Network/dnszones/MX" then rrset.mx_records.map { |r| "#{ r.preference } #{ r.exchange }" }
-      when "Microsoft.Network/dnszones/NS" then rrset.ns_records.map { |r| r.nsdname }
-      when "Microsoft.Network/dnszones/PTR" then rrset.ptr_records.map { |r| r.ptrdname }
-      when "Microsoft.Network/dnszones/SRV" then rrset.srv_records.map { |r| "#{ r.priority } #{ r.weight } #{ r.port } #{ r.target }" }
-      when "Microsoft.Network/dnszones/TXT" then rrset.txt_records.map { |r| r.value }
-      when "Microsoft.Network/dnszones/CNAME" then rrset.cname_record.map { |r| r.cname }
-      when "Microsoft.Network/dnszones/SOA" then rrset.soa_record.map { |r| "#{ r.host } #{ r.email } #{ r.serial_number } #{ r.refresh_time } #{ r.retry_time } #{ r.expire_time } #{ r.minimum_ttl }" }
-      when "Microsoft.Network/dnszones/CAA" then rrset.caa_records.map { |r| "#{ r.flags } #{ r.tag } #{ r.value }" }
+      when "Microsoft.Network/dnszones/A" then rrset.arecords.map { |r| { type: "A", value: r.ipv4address } }
+      when "Microsoft.Network/dnszones/AAAA" then rrset.aaaa_records.map { |r| { type: "AAAA", value: r.ipv6address } }
+      when "Microsoft.Network/dnszones/MX" then rrset.mx_records.map { |r| { type: "MX", value: "#{ r.preference } #{ r.exchange }" }}
+      when "Microsoft.Network/dnszones/NS" then rrset.ns_records.map { |r| { type: "NS", value: r.nsdname } }
+      when "Microsoft.Network/dnszones/PTR" then rrset.ptr_records.map { |r| { type: "PTR", value: r.ptrdname } }
+      when "Microsoft.Network/dnszones/SRV" then rrset.srv_records.map { |r| { type: "SRV", value: "#{ r.priority } #{ r.weight } #{ r.port } #{ r.target }" } }
+      when "Microsoft.Network/dnszones/TXT" then rrset.txt_records.map { |r| { type: "TXT", value: r.value } }
+      when "Microsoft.Network/dnszones/CNAME" then rrset.cname_record.map { |r| { type: "CNAME", value: r.cname } }
+      when "Microsoft.Network/dnszones/SOA" then rrset.soa_record.map { |r| { type: "SOA", value: "#{ r.host } #{ r.email } #{ r.serial_number } #{ r.refresh_time } #{ r.retry_time } #{ r.expire_time } #{ r.minimum_ttl }" } }
+      when "Microsoft.Network/dnszones/CAA" then rrset.caa_records.map { |r| { type: "CAA", value: "#{ r.flags } #{ r.tag } #{ r.value }" } }
       else []
       end
     end
