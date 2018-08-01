@@ -204,7 +204,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     end
 
     def import_rrset(rrset)
-      @cache[rrset.name.chomp(".")][rrset.type.to_sym] = get_records_from_record_set(rrset).map do |rr|
+      @cache["#{ rrset.name }.#{ @zone_name }".chomp(".")][rrset.type.split("/").last.to_sym] = get_records_from_record_set(rrset).map do |rr|
         rrdata = if rrset.type == "TXT"
           rr.value
         else
