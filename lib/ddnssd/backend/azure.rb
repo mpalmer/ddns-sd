@@ -121,7 +121,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar.value = v[2]
                         ar }
       end
-      @logger.debug("rrset after azurifying: rrset.inspect")
+      @logger.debug("rrset after azurifying: #{rrset.inspect}")
       rrset
     end
   end
