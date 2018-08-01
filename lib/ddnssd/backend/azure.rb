@@ -243,7 +243,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
   def set_record(rr)
     @logger.debug(progname) { "-> set_record(#{rr.inspect})" }
-    do_change(change_for("UPDATE", [rr]))
+    update [rr]
     @record_cache.set(rr)
     @logger.debug(progname) { "<- set_record(#{rr.inspect})" }
   end
@@ -258,17 +258,15 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
       existing_records = @record_cache.get(rr.name, rr.type)
 
-      changes = if existing_records.empty?
-        [change_for("CREATE", [rr])]
+      if existing_records.empty?
+        create [rr]
       else
-        [change_for("UPDATE", (existing_records + [rr]).uniq)]
+        update (existing_records + [rr]).uniq
       end
-
-      do_change(*changes)
 
       @record_cache.add(rr)
       @logger.debug(progname) { "<- add_record(#{rr.inspect})" }
-    rescue Aws::Route53::Errors::InvalidChangeBatch => ex
+    rescue StandardError => ex
       if tries_left > 0
         @logger.debug(progname) { "Received InvalidChangeBatch; refreshing record set for #{rr.name} #{rr.type}" }
 
@@ -277,7 +275,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
         @logger.debug(progname) { "record set for #{rr.name} #{rr.type} is now #{@record_cache.get(rr.name, rr.type).inspect}" }
         retry
       else
-        @logger.error(progname) { "Cannot get this add_record change to apply, because #{ex.message}: #{changes.inspect}. Giving up." }
+        @logger.error(progname) { "Cannot get this add_record change to apply, because #{ex.message}. Giving up." }
       end
     end
   end
@@ -289,19 +287,17 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
     begin
       tries_left -= 1
-      changes = change_to_remove_record_from_set(@record_cache.get(rr.name, rr.type), rr)
-      @logger.debug(progname) { "change_to_remove_record_from_set => #{changes.inspect}" }
-      do_change(*changes) unless changes.empty?
+      change_to_remove_record_from_set(@record_cache.get(rr.name, rr.type), rr)
       @record_cache.remove(rr)
       @logger.debug(progname) { "<- remove_record(#{rr.inspect})" }
-    rescue Aws::Route53::Errors::InvalidChangeBatch => ex
+    rescue StandardError => ex
       if tries_left > 0
         @logger.debug(progname) { "Received InvalidChangeBatch; refreshing record set for #{rr.name} #{rr.type}" }
 
         @record_cache.refresh(rr.name, rr.type)
         retry
       else
-        @logger.error(progname) { "Cannot get this remove_record change to apply, because #{ex.message}: #{changes.inspect}. Giving up." }
+        @logger.error(progname) { "Cannot get this remove_record change to apply, because #{ex.message}. Giving up." }
       end
     end
   end
@@ -320,15 +316,14 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
         # Shouldn't happen!
         #:nocov:
         @logger.warn(progname) { "no existing record to remove for #{srv_rr.inspect}" }
-        changes = []
         #:nocov:
       elsif existing_records == [srv_rr]
-        changes = [change_for("DELETE", existing_records)]
+        delete existing_records
 
         txt = @record_cache.get(srv_rr.name, :TXT)
         unless txt.empty?
           @logger.debug(progname) { "Removing associated TXT record" }
-          changes << change_for("DELETE", txt)
+          delete txt
         else
           # Shouldn't happen...
           #:nocov:
@@ -341,14 +336,13 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
         if ptr
           @logger.debug(progname) { "Removing associated PTR record #{ptr.inspect}" }
-          changes += change_to_remove_record_from_set(ptrs, ptr)
+          change_to_remove_record_from_set(ptrs, ptr)
         end
       else
-        changes = change_to_remove_record_from_set(existing_records, srv_rr)
+        change_to_remove_record_from_set(existing_records, srv_rr)
       end
 
       unless existing_records.empty?
-        do_change(*changes) unless changes.empty?
         @record_cache.remove(srv_rr)
 
         if existing_records == [srv_rr]
@@ -359,7 +353,8 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       end
 
       @logger.debug(progname) { "<- remove_srv_record(#{srv_rr.inspect})" }
-    rescue Aws::Route53::Errors::InvalidChangeBatch => ex
+    rescue StandardError => ex
+
       if tries_left > 0
         @logger.debug(progname) { "Received InvalidChangeBatch; refreshing record set for #{srv_rr.name} #{srv_rr.type}/TXT" }
 
@@ -369,7 +364,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
         retry
       else
-        @logger.error(progname) { "Cannot get this remove_srv_record change to apply, because #{ex.message}: #{changes.inspect}. Giving up." }
+        @logger.error(progname) { "Cannot get this remove_srv_record change to apply, because #{ex.message}. Giving up." }
       end
     end
   end
@@ -398,36 +393,10 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       []
       #:nocov:
     elsif rrset.reject { |er| er.value == rr.value }.empty?
-      [change_for("DELETE", rrset)]
+      delete rrset
     else
-      [change_for("UPDATE", rrset.reject { |er| er.value == rr.value })]
+      update rrset.reject { |er| er.value == rr.value }
     end
-  end
-
-  def do_change(*changes)
-    begin
-      retryable do
-        @route53_stats.measure(op: "change") do
-          @route53.change_resource_record_sets(hosted_zone_id: @zone_id, change_batch: { changes: changes })
-        end
-      end
-    rescue Aws::Route53::Errors::MalformedInput => ex
-      #:nocov:
-      @logger.error { (["Please report this bug: route53 reports MalformedInput error on changes: #{changes.inspect}"] + ex.backtrace).join("\n  ") }
-      #:nocov:
-    end
-  end
-
-  def change_for(action, rrset)
-    {
-      action: action,
-      resource_record_set: {
-        name: rrset.first.name,
-        type: rrset.first.type.to_s,
-        ttl: rrset.first.ttl,
-        resource_records: rrset.map { |rr| { value: rr.value } }
-      }
-    }
   end
 
   def update(records)
