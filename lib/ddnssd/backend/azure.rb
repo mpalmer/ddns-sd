@@ -94,8 +94,9 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar }
       when "TXT" then rrset.txt_records = records.map { |r|
                         ar = TxtRecord.new
-                        ar.value = Shellwords.shellwords(r.value).reject { |v| v.empty? }
+                        ar.value = r.data.strings
                         @logger.debug("txt record value: #{ar.value.inspect}")
+                        @logger.debug("records: #{ar.inspect}")
                         ar }
       when "CNAME" then rrset.cname_record = records.map { |r|
                           ar = CnameRecord.new
@@ -120,6 +121,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar.value = v[2]
                         ar }
       end
+      @logger.debug("rrset after azurifying: rrset.inspect")
       rrset
     end
   end
