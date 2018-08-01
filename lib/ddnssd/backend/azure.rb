@@ -47,7 +47,12 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       end
     end
 
-    def add_records_to_set(rrset, records)
+    def get_azure_recordset_format(records)
+      r = records.first
+      rrset = RecordSet.new
+      rrset.ttl = r.ttl
+      rrset.name = r.name
+      rrset.type = r.type.to_s
       case records.first.type.to_s
       when "A" then rrset.arecords = records.map { |r|
                       ar = ARecord.new
@@ -426,12 +431,8 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
   end
 
   def update(records)
-    r = records.first
-    record_set = RecordSet.new
-    record_set.ttl = r.ttl
-    record_set.name = r.name
-    record_set.type = r.type.to_s
-    @client.record_sets.create_or_update(@resource_group_name, @zone_name, r.name, r.type.to_s)
+    records = get_azure_recordset_format(records)
+    @client.record_sets.create_or_update(@resource_group_name, @zone_name, records.name, records.type, records)
   end
 
   def delete(records)
