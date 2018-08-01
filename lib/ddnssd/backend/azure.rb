@@ -36,6 +36,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
   module RecordSetHelper
     def get_records_from_record_set(rrset)
+      @logger.debug("converting from azure records of type: #{rrset.type}")
       case rrset.type
       when "A" then rrset.arecords.map { |r| r.ipv4address }
       when "AAAA" then rrset.aaaa_records.map { |r| r.ipv6address }
@@ -47,6 +48,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       when "CNAME" then rrset.cname_record.map { |r| r.cname }
       when "SOA" then rrset.soa_record.map { |r| "#{ r.host } #{ r.email } #{ r.serial_number } #{ r.refresh_time } #{ r.retry_time } #{ r.expire_time } #{ r.minimum_ttl }" }
       when "CAA" then rrset.caa_records.map { |r| "#{ r.flags } #{ r.tag } #{ r.value }" }
+      else []
       end
     end
 
@@ -56,6 +58,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       rrset.ttl = r.ttl
       rrset.name = r.name
       rrset.type = r.type.to_s
+      @logger.debug("converting to azure records of type: #{rrset.type}")
       case records.first.type.to_s
       when "A" then rrset.arecords = records.map { |r|
                       ar = ARecord.new
