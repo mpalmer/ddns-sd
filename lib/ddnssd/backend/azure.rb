@@ -94,7 +94,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar }
       when "TXT" then rrset.txt_records = records.map { |r|
                         ar = TxtRecord.new
-                        ar.value = r.data.strings
+                        ar.value = r.data.strings.reject { |v| v.empty? }
                         @logger.debug("txt record value: #{ar.value.inspect}")
                         @logger.debug("records: #{ar.inspect}")
                         ar }
