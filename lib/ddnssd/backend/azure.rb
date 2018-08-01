@@ -205,6 +205,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
     @zone_name = config.backend_config["ZONE_NAME"]
     @resource_group_name = config.backend_config["RESOURCE_GROUP_NAME"]
+    @access_token = config.backend_config["ACCESS_TOKEN"]
 
     if @zone_name.nil? || @zone_name.empty?
       raise DDNSSD::Config::InvalidEnvironmentError,
@@ -214,9 +215,12 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       raise DDNSSD::Config::InvalidEnvironmentError,
             "DDNSSD_AZURE_RESOURCE_GROUP_NAME cannot be empty or missing"
     end
+    if @access_token.nil? || @access_token.empty?
+      raise DDNSSD::Config::InvalidEnvironmentError,
+            "DDNSSD_AZURE_ACCESS_TOKEN cannot be empty or missing"
+    end
 
-    # TODO: how do we pass an access token to the running docker instance??
-    account = JSON.parse(`az account get-access-token`)
+    account = JSON.parse(@access_token)
     credentials = MsRest::TokenCredentials.new(account["accessToken"])
 
     client = DnsManagementClient.new(credentials)
