@@ -21,7 +21,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       begin
         tries_left -= 1
         yield
-      rescue
+      rescue StandardError => ex
         if tries_left > 0
           @logger.info(progname) { "Received #{ex.class}; waiting for #{next_timeout}s and retrying" }
           Kernel.sleep next_timeout
