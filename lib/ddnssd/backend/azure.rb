@@ -245,8 +245,8 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     @record_cache.refresh_all
 
     %i{A AAAA SRV PTR TXT CNAME}.map do |type|
+      @logger.debug(@record_cache.inspect)
       @record_cache.all_of_type(type)
-      @logger.debug(@record_cache.all_of_type(type))
     end.flatten
   end
 
