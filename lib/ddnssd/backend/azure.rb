@@ -94,7 +94,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar }
       when "TXT" then rrset.txt_records = records.map { |r|
                         ar = TxtRecord.new
-                        ar.value = r.value
+                        ar.value = Shellwords.shellwords(r.value)
                         ar }
       when "CNAME" then rrset.cname_record = records.map { |r|
                           ar = CnameRecord.new
@@ -199,7 +199,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     def import_rrset(rrset)
       @cache[rrset.name.chomp(".")][rrset.type.to_sym] = get_records_from_record_set(rrset).map do |rr|
         rrdata = if rrset.type == "TXT"
-          Shellwords.shellwords(rr.value)
+          rr.value
         else
           rr.value.split(/\s+/).map { |v| v =~ /\A\d+\z/ ? v.to_i : v }
         end
