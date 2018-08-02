@@ -210,6 +210,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
         rrdata = if rrset.type == "TXT"
           rr["value"]
         else
+          @logger.debug("rr value: #{rr.inspect}")
           rr["value"].split(/\s+/).map { |v| v =~ /\A\d+\z/ ? v.to_i : v }
         end
 
