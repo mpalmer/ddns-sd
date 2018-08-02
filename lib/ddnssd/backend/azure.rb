@@ -421,12 +421,13 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
   end
 
   def update(records)
+    r = records.first
     records = get_azure_recordset_format(records)
-    @client.record_sets.create_or_update(@resource_group_name, @zone_name, records.name, records.type, records)
+    @client.record_sets.create_or_update(@resource_group_name, @zone_name, r.name, r.type, records)
   end
 
   def delete(records)
     r = records.first
-    @client.record_sets.delete(@resource_group_name, @zone_name, r.name, r.type.to_s)
+    @client.record_sets.delete(@resource_group_name, @zone_name, r.name.sub(Regexp.new(".#{@zone_name}"), ""), r.type.to_s)
   end
 end
