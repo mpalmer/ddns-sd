@@ -197,6 +197,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
     def all_resource_record_sets
       res = @client.record_sets.list_by_dns_zone(@resource_group_name, @zone_name)
+      @logger.debug("got all record sets: #{ res.inspect }")
       res.each { |rrset| yield rrset }
 
     rescue StandardError => ex
@@ -204,6 +205,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     end
 
     def import_rrset(rrset)
+      @logger.debug("importing record into: [#{rrset.name}.#{@zone_name}][#{rrset.type.split("/").last.to_sym}]")
       @cache["#{ rrset.name }.#{ @zone_name }".chomp(".")][rrset.type.split("/").last.to_sym] = get_records_from_record_set(rrset).map do |rr|
         rrdata = if rrset.type == "TXT"
           rr.value
