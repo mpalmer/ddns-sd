@@ -120,4 +120,143 @@ describe DDNSSD::Backend::Azure do
       end
     end
   end
+
+  describe "#publish_record" do
+
+    before(:each) do
+      allow(az_client.record_sets).to receive(:create_or_update)
+    end
+
+    context "with an NS record" do
+      it "raises an exception" do
+        expect { backend.publish_record(DDNSSD::DNSRecord.new("example.com", 60, :NS, "ns1.example.com")) }.to raise_error(DDNSSD::Backend::InvalidRequest)
+      end
+    end
+
+    context "with an A record" do
+      it "upserts the A record" do
+        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "A", anything)
+        expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+
+        backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :A, "192.0.2.42"))
+      end
+    end
+
+    context "with a AAAA record" do
+      it "upserts the AAAA record" do
+        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "AAAA", anything)
+        expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+
+        backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
+      end
+    end
+
+    context "with a CNAME record" do
+      it "upserts the CNAME record" do
+        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "db", "CNAME", anything)
+        expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+
+        backend.publish_record(DDNSSD::DNSRecord.new("db.example.com", 42, :CNAME, "pgsql.host27.example.com"))
+      end
+    end
+
+    context "with a TXT record" do
+      it "upserts the TXT record" do
+        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "TXT", anything)
+        expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+
+        backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, 'something "funny"', "this too"))
+      end
+    end
+
+    context "with a SRV record" do
+      context "no existing recordset" do
+        it "creates a new SRV record" do
+          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", anything)
+          expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+
+          backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+        end
+      end
+
+      context "with existing records for the name/type" do
+        before(:each) do
+          backend.instance_variable_get(:@record_cache).set(
+            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host1.example.com"),
+            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host3.example.com")
+          )
+        end
+
+        #TODO better tests for this?
+        it "adds a SRV record to the existing recordset" do
+          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", anything)
+          expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+
+          backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+        end
+      end
+
+      #TODO better tests for this?
+      context "with the record already existent" do
+        before(:each) do
+          backend.instance_variable_get(:@record_cache).set(
+            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host1.example.com"),
+            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host3.example.com"),
+            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com")
+          )
+        end
+
+        #TODO better tests for this?
+        it "makes sure we're up-to-date" do
+          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", anything)
+          expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+
+          backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+        end
+      end
+    end
+
+    context "with a PTR record" do
+      context "no existing recordset" do
+        it "creates a new PTR record" do
+          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR", anything)
+          expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+
+          backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+        end
+      end
+
+      context "with existing records for the name/type" do
+        before(:each) do
+          backend.instance_variable_get(:@record_cache).set(
+            DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "xyzzy._http._tcp.example.com"),
+            DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "argle._http._tcp.example.com")
+          )
+        end
+
+        #TODO better tests for this
+        it "adds a PTR record to the existing recordset" do
+          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR", anything)
+          expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+
+          backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+        end
+      end
+
+      context "including the one we want to add" do
+        before(:each) do
+          backend.instance_variable_get(:@record_cache).set(
+            DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com")
+          )
+        end
+
+        it "runs a no-change change to ensure everything's up-to-date" do
+          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR", anything)
+          expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+
+          backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+        end
+      end
+    end
+  end
 end
