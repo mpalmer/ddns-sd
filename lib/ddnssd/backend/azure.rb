@@ -57,9 +57,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       r = records.first
       rrset = RecordSet.new
       rrset.ttl = r.ttl
-      @logger.debug("RECORD NAME BEFORE SUB: #{r.name}")
       rrset.name = r.name.sub(Regexp.new(".#{@zone_name}"), "")
-      @logger.debug("RECORD NAME AFTER SUB: #{rrset.name}")
       rrset.type = r.type.to_s
       @logger.debug("converting to azure records of type: #{rrset.type}")
       @logger.debug("converting to azure records list: #{records.inspect}")
@@ -423,9 +421,8 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
   end
 
   def update(records)
-    r = records.first
     records = get_azure_recordset_format(records)
-    @client.record_sets.create_or_update(@resource_group_name, @zone_name, r.name, r.type, records)
+    @client.record_sets.create_or_update(@resource_group_name, @zone_name, records.name, records.type, records)
   end
 
   def delete(records)
