@@ -259,4 +259,115 @@ describe DDNSSD::Backend::Azure do
       end
     end
   end
+
+
+  describe "#suppress_record" do
+    context "with an A record" do
+      context "with no other records in the set" do
+        before(:each) do
+          backend.instance_variable_get(:@record_cache).set(
+            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42")
+          )
+        end
+
+        it "deletes the record set" do
+          expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "abcd1234.flingle", "A")
+          expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+
+          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
+        end
+      end
+
+      context "with other records in the set" do
+        before(:each) do
+          backend.instance_variable_get(:@record_cache).set(
+            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.1"),
+            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"),
+            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.180")
+          )
+        end
+
+        # TODO - better tests
+        it "modifies the record set to remove our record" do
+          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "abcd1234.flingle", "A", anything)
+          expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+          expect(az_client.record_sets).to_not receive(:delete)
+
+          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
+        end
+      end
+
+      # TODO - better tests
+      context "with our record already gone" do
+        before(:each) do
+          backend.instance_variable_get(:@record_cache).set(
+            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.1"),
+            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.180")
+          )
+        end
+
+        it "makes a no-op request to make sure everything is up-to-date" do
+          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "abcd1234.flingle", "A", anything)
+          expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+          expect(az_client.record_sets).to_not receive(:delete)
+
+          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
+        end
+      end
+    end
+
+    context "with a AAAA record" do
+      context "with no other records in the set" do
+        before(:each) do
+          backend.instance_variable_get(:@record_cache).set(
+            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42")
+          )
+        end
+
+        it "deletes the record set" do
+          expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "AAAA")
+          expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+
+          backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
+        end
+      end
+
+      context "with other records in the set" do
+        before(:each) do
+          backend.instance_variable_get(:@record_cache).set(
+            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::1"),
+            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"),
+            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::180")
+          )
+        end
+
+        # TODO - better tests
+        it "modifies the record set to remove our record" do
+          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "AAAA", anything)
+          expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+          expect(az_client.record_sets).to_not receive(:delete)
+
+          backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
+        end
+      end
+
+      context "with our record already gone" do
+        before(:each) do
+          backend.instance_variable_get(:@record_cache).set(
+            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::1"),
+            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::180")
+          )
+        end
+
+        # TODO - better tests
+        it "makes a no-op request to make sure everything is up-to-date" do
+          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "AAAA", anything)
+          expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+          expect(az_client.record_sets).to_not receive(:delete)
+
+          backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
+        end
+      end
+    end
+  end
 end
