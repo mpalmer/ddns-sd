@@ -57,7 +57,9 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       r = records.first
       rrset = RecordSet.new
       rrset.ttl = r.ttl
+      @logger.debug("RECORD NAME BEFORE SUB: #{r.name}")
       rrset.name = r.name.sub(Regexp.new(".#{@zone_name}"), "")
+      @logger.debug("RECORD NAME AFTER SUB: #{rrset.name}")
       rrset.type = r.type.to_s
       @logger.debug("converting to azure records of type: #{rrset.type}")
       @logger.debug("converting to azure records list: #{records.inspect}")
