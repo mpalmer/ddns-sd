@@ -31,8 +31,7 @@ describe DDNSSD::Backend::Azure do
   let(:az_stubs) { {} }
 
   before(:each) do
-    # TODO what do we replace the stubs with?
-    #Aws.config[:route53] = { stub_responses: az_stubs }
+    Azure::Dns::Mgmt.V2018_03_01_preview.config[:RecordSets] = { stub_responses: az_stubs }
     allow(DnsManagementClient).to receive(:new).and_return(az_client)
     allow(MsRest::TokenCredentials).to receive(:new).and_return(nil)
   end
@@ -57,9 +56,9 @@ describe DDNSSD::Backend::Azure do
 
   describe "#dns_records" do
     context "one page of records" do
-      let(:route53_stubs) do
+      let(:az_stubs) do
         {
-          list_resource_record_sets: route53_response_fixture("one_page_of_records")
+          list_by_dns_zone: azure_response_fixture("basic_response")
         }
       end
 

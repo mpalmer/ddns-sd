@@ -24,4 +24,11 @@ module ExampleMethods
   def route53_response_fixture(name)
     YAML.load_file(File.expand_path("../fixtures/route53_responses/#{name}.yml", __FILE__))
   end
+
+  def azure_response_fixture(name)
+    client = Azure::Dns::Mgmt::V2018_03_01_preview::DnsManagementClient.new
+    json = File.read(File.expand_path("../fixtures/azure_responses/#{name}.json", __FILE__))
+    request_mapper = Azure::Dns::Mgmt::V2018_03_01_preview::Models::RecordSet.mapper
+    client.deserialize(request_mapper, json)
+  end
 end
