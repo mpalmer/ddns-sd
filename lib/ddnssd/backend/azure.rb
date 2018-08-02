@@ -36,7 +36,6 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
   module RecordSetHelper
     def get_records_from_record_set(rrset)
-      @logger.debug("converting from azure records of type: #{rrset.type}")
       @logger.debug("converting from azure records list: #{rrset.inspect}")
       case rrset.type
       when "Microsoft.Network/dnszones/A" then rrset.arecords.map { |r| { type: "A", value: r.ipv4address } }
@@ -59,8 +58,6 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       rrset.ttl = r.ttl
       rrset.name = r.name.sub(Regexp.new(".#{@zone_name}"), "")
       rrset.type = r.type.to_s
-      @logger.debug("converting to azure records of type: #{rrset.type}")
-      @logger.debug("converting to azure records list: #{records.inspect}")
       case r.type.to_s
       when "A" then rrset.arecords = records.map { |r|
                       ar = ARecord.new
@@ -95,8 +92,6 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       when "TXT" then rrset.txt_records = records.map { |r|
                         ar = TxtRecord.new
                         ar.value = r.data.strings
-                        @logger.debug("txt record value: #{ar.value.inspect}")
-                        @logger.debug("records: #{ar.inspect}")
                         ar }
       when "CNAME" then rrset.cname_record = records.map { |r|
                           ar = CnameRecord.new
@@ -197,7 +192,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
     def all_resource_record_sets
       res = @client.record_sets.list_by_dns_zone(@resource_group_name, @zone_name)
-      @logger.debug("got all record sets: #{ res.inspect }")
+      @logger.debug("All record sets: #{ res.inspect }")
       res.each { |rrset| yield rrset }
 
     rescue StandardError => ex
@@ -207,12 +202,10 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     def import_rrset(rrset)
       record_type = rrset.type.split("/").last.to_sym
       full_name = "#{ rrset.name }.#{ @zone_name }".chomp(".")
-      @logger.debug("importing record into: [#{ full_name }][#{ record_type}]")
       @cache[full_name][record_type] = get_records_from_record_set(rrset).map do |rr|
         rrdata = if rrset.type == "TXT"
           rr[:value]
         else
-          @logger.debug("rr value: #{rr.inspect}")
           rr[:value].split(/\s+/).map { |v| v =~ /\A\d+\z/ ? v.to_i : v }
         end
 
@@ -250,7 +243,6 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     @record_cache.refresh_all
 
     %i{A AAAA SRV PTR TXT CNAME}.map do |type|
-      @logger.debug(@record_cache.inspect)
       @record_cache.all_of_type(type)
     end.flatten
   end
