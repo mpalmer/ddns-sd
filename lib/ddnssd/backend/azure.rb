@@ -204,7 +204,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       record_type = rrset.type.split("/").last.to_sym
       full_name = "#{ rrset.name }.#{ @zone_name }".chomp(".")
       @cache[full_name][record_type] = get_records_from_record_set(rrset).map do |rr|
-        rrdata = if rrset.type == "TXT"
+        rrdata = if record_type == :TXT
           rr[:value]
         else
           rr[:value].split(/\s+/).map { |v| v =~ /\A\d+\z/ ? v.to_i : v }
