@@ -207,10 +207,10 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     def import_rrset(rrset)
       @logger.debug("importing record into: [#{rrset.name}.#{@zone_name}][#{rrset.type.split("/").last.to_sym}]")
       @cache["#{ rrset.name }.#{ @zone_name }".chomp(".")][rrset.type.split("/").last.to_sym] = get_records_from_record_set(rrset).map do |rr|
-        rrdata = if rrset.type == "TXT"
-          rr.value
+        rrdata = if rrset["type"] == "TXT"
+          rr["value"]
         else
-          rr.value.split(/\s+/).map { |v| v =~ /\A\d+\z/ ? v.to_i : v }
+          rr["value"].split(/\s+/).map { |v| v =~ /\A\d+\z/ ? v.to_i : v }
         end
 
         DDNSSD::DNSRecord.new(rrset.name.chomp("."), rrset.ttl, rrset.type.to_sym, *rrdata)
