@@ -29,6 +29,6 @@ module ExampleMethods
     client = Azure::Dns::Mgmt::V2018_03_01_preview::DnsManagementClient.new
     json = File.read(File.expand_path("../fixtures/azure_responses/#{name}.json", __FILE__))
     request_mapper = Azure::Dns::Mgmt::V2018_03_01_preview::Models::RecordSet.mapper
-    client.deserialize(request_mapper, json)
+    JSON.parse(json).map { |v| client.deserialize(request_mapper, v) }
   end
 end

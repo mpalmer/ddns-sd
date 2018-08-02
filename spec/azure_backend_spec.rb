@@ -63,7 +63,7 @@ describe DDNSSD::Backend::Azure do
       end
 
       it "asks for the records of the correct zone ID" do
-        expect(r53).to receive(:list_resource_record_sets).with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: nil, start_record_type: nil).and_call_original
+        expect(az_client).to receive(:list_by_dns_zone).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain).and_call_original
 
         backend.dns_records
       end
@@ -108,9 +108,9 @@ describe DDNSSD::Backend::Azure do
     end
 
     context "on other errors" do
-      let(:route53_stubs) do
+      let(:az_stubs) do
         {
-          list_resource_record_sets: 'FunkyError'
+          list_by_dns_zone: 'FunkyError'
         }
       end
 
