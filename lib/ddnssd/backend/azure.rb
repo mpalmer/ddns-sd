@@ -46,8 +46,8 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       when "Microsoft.Network/dnszones/PTR" then rrset.ptr_records.map { |r| { type: "PTR", value: r.ptrdname } }
       when "Microsoft.Network/dnszones/SRV" then rrset.srv_records.map { |r| { type: "SRV", value: "#{ r.priority } #{ r.weight } #{ r.port } #{ r.target }" } }
       when "Microsoft.Network/dnszones/TXT" then rrset.txt_records.map { |r| { type: "TXT", value: r.value } }
-      when "Microsoft.Network/dnszones/CNAME" then rrset.cname_record.map { |r| { type: "CNAME", value: r.cname } }
-      when "Microsoft.Network/dnszones/SOA" then rrset.soa_record.map { |r| { type: "SOA", value: "#{ r.host } #{ r.email } #{ r.serial_number } #{ r.refresh_time } #{ r.retry_time } #{ r.expire_time } #{ r.minimum_ttl }" } }
+      when "Microsoft.Network/dnszones/CNAME" then [{ type: "CNAME", value: rrset.cname_record.cname }]
+      when "Microsoft.Network/dnszones/SOA" then [{ type: "SOA", value: "#{ rrset.soa_record.host } #{ rrset.soa_record.email } #{ rrset.soa_record.serial_number } #{ rrset.soa_record.refresh_time } #{ rrset.soa_record.retry_time } #{ rrset.soa_record.expire_time } #{ rrset.soa_record.minimum_ttl }" }]
       when "Microsoft.Network/dnszones/CAA" then rrset.caa_records.map { |r| { type: "CAA", value: "#{ r.flags } #{ r.tag } #{ r.value }" } }
       else []
       end
