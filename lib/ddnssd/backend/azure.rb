@@ -36,7 +36,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
   module RecordSetHelper
     def get_records_from_record_set(rrset)
-      @logger.debug("converting from azure records list: #{rrset.inspect}")
+      @logger.debug(progname) { "-> get_records_from_record_set(#{rrset.inspect})" }
       case rrset.type
       when "Microsoft.Network/dnszones/A" then rrset.arecords.map { |r| { type: "A", value: r.ipv4address } }
       when "Microsoft.Network/dnszones/AAAA" then rrset.aaaa_records.map { |r| { type: "AAAA", value: r.ipv6address } }
@@ -116,7 +116,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar.value = v[2]
                         ar }
       end
-      @logger.debug("rrset after azurifying: #{rrset.inspect}")
+      @logger.debug(progname) { "-> get_azure_recordset_format(#{rrset.inspect})" }
       if r.type.to_s == "TXT"
         rrset.txt_records
       else
@@ -192,7 +192,8 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
     def all_resource_record_sets
       res = @client.record_sets.list_by_dns_zone(@resource_group_name, @zone_name)
-      @logger.debug("All record sets: #{ res.inspect }")
+      @logger.debug(progname) { "all_resource_record_sets #{res.inspect}" }
+
       res.each { |rrset| yield rrset }
 
     rescue StandardError => ex
@@ -279,7 +280,6 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       @record_cache.add(rr)
       @logger.debug(progname) { "<- add_record(#{rr.inspect})" }
     rescue StandardError => ex
-      @logger.debug(ex.backtrace)
       if tries_left > 0
         @logger.debug(progname) { "Received InvalidChangeBatch; refreshing record set for #{rr.name} #{rr.type}" }
 
