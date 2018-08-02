@@ -521,6 +521,34 @@ running `ddns-sd` will need to have the following IAM policy attached:
     in the Route53 zone list.
 
 
+## Azure DNS
+
+**`DDNSSD_BACKEND=azure`**
+
+Maintains records in an [Azure](https://azure.microsoft.com/en-us/services/dns/) DNS Zone.
+Currently only supports authentication through access tokens via `az account get-access-token`.
+
+Every Azure VM running `ddns-sd` will need to have DNS Zone Contributor role on the DNS zone
+as well as Network Contributor on the Resource Group that the DNS Zone belongs to.
+
+The DNS Zone name is equal to the `DNSSD_BASE_DOMAIN`.
+
+### Configuration
+
+* **`DDNSSD_AZURE_RESOURCE_GROUP_NAME`**
+
+    (required)
+
+    The name of the resource group that owns the DNS Zone.
+    
+    
+* **`DDNSSD_AZURE_ACCESS_TOKEN`**
+
+    (required)
+
+    An azure access token (in json format) - this is the output of `az account get-access-token`.
+    
+
 # Signals
 
 The `ddns-sd` command-line program (and hence the Docker container) accept
