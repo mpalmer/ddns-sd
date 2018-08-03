@@ -223,7 +223,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
     @zone_name = config.base_domain
     @resource_group_name = config.backend_config["RESOURCE_GROUP_NAME"]
-    @access_token = config.backend_config["ACCESS_TOKEN"].gsub(/\A"|"\Z/, '')
+    @access_token = config.backend_config["ACCESS_TOKEN"]
 
     if @resource_group_name.nil? || @resource_group_name.empty?
       raise DDNSSD::Config::InvalidEnvironmentError,
@@ -233,6 +233,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       raise DDNSSD::Config::InvalidEnvironmentError,
             "DDNSSD_AZURE_ACCESS_TOKEN cannot be empty or missing"
     end
+    @access_token = @access_token.gsub(/\A"|"\Z/, '')
 
     account = JSON.parse(@access_token)
     credentials = MsRest::TokenCredentials.new(account["accessToken"])
