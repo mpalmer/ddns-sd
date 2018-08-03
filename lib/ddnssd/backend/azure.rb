@@ -118,12 +118,9 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       end
       @logger.debug(progname) { "-> get_azure_recordset_format(#{rrset.inspect})" }
       if r.type.to_s == "TXT"
-        txt_records = rrset.txt_records
-        request_mapper = Azure::Dns::Mgmt::V2018_03_01_preview::Models::TxtRecord.mapper
-        txt_records.map { |txt_record| @client.serialize(request_mapper, txt_record) }
+        rrset.txt_records
       else
-        request_mapper = Azure::Dns::Mgmt::V2018_03_01_preview::Models::RecordSet.mapper
-        @client.serialize(request_mapper, rrset)
+        rrset
       end
     end
   end
