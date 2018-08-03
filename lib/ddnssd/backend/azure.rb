@@ -223,7 +223,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
     @zone_name = config.base_domain
     @resource_group_name = config.backend_config["RESOURCE_GROUP_NAME"]
-    @access_token = config.backend_config["ACCESS_TOKEN"]
+    @access_token = config.backend_config["ACCESS_TOKEN"].gsub(/\A"|"\Z/, '')
 
     if @resource_group_name.nil? || @resource_group_name.empty?
       raise DDNSSD::Config::InvalidEnvironmentError,
