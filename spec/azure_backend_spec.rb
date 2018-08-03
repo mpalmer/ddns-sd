@@ -162,7 +162,7 @@ describe DDNSSD::Backend::Azure do
 
     context "with a TXT record" do
       it "upserts the TXT record" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "TXT", anything)
+        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "TXT", [{"value"=>['something "funny"', "this too"]}])
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, 'something "funny"', "this too"))
