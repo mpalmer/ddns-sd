@@ -135,7 +135,7 @@ describe DDNSSD::Backend::Azure do
 
     context "with an A record" do
       it "upserts the A record" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "A", anything)
+        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "A", {"properties"=>{"TTL"=>42, "ARecords"=>[{"ipv4Address"=>"192.0.2.42"}]}})
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :A, "192.0.2.42"))
@@ -144,7 +144,7 @@ describe DDNSSD::Backend::Azure do
 
     context "with a AAAA record" do
       it "upserts the AAAA record" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "AAAA", anything)
+        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "AAAA", {"properties"=>{"TTL"=>42, "AAAARecords"=>[{"ipv6Address"=>"2001:DB8::42"}]}})
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
@@ -153,7 +153,7 @@ describe DDNSSD::Backend::Azure do
 
     context "with a CNAME record" do
       it "upserts the CNAME record" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "db", "CNAME", anything)
+        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "db", "CNAME", {"properties"=>{"TTL"=>42, "CNAMERecord"=>{"cname"=>"pgsql.host27.example.com"}}})
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("db.example.com", 42, :CNAME, "pgsql.host27.example.com"))

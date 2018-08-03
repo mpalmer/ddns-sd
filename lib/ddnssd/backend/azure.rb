@@ -96,7 +96,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       when "CNAME" then rrset.cname_record = records.map { |r|
                           ar = CnameRecord.new
                           ar.cname = r.value
-                          ar }
+                          ar }.first
       when "SOA" then rrset.soa_record = records.map { |r|
                         v = r.value.split(" ")
                         ar = SoaRecord.new
@@ -107,7 +107,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar.retry_time = v[4]
                         ar.expire_time = v[5]
                         ar.minimum_ttl = v[6]
-                        ar }
+                        ar }.first
       when "CAA" then rrset.caa_records = records.map { |r|
                         v = r.value.split(" ")
                         ar = CaaRecord.new
@@ -118,9 +118,12 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       end
       @logger.debug(progname) { "-> get_azure_recordset_format(#{rrset.inspect})" }
       if r.type.to_s == "TXT"
-        rrset.txt_records
+        txt_records = rrset.txt_records
+        request_mapper = Azure::Dns::Mgmt::V2018_03_01_preview::Models::TxtRecord.mapper
+        txt_records.map { |txt_record| @client.serialize(request_mapper, txt_record) }
       else
-        rrset
+        request_mapper = Azure::Dns::Mgmt::V2018_03_01_preview::Models::RecordSet.mapper
+        @client.serialize(request_mapper, rrset)
       end
     end
   end
