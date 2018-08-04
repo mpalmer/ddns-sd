@@ -14,7 +14,7 @@ describe DDNSSD::Backend::Azure do
       request_mapper = Azure::Dns::Mgmt::V2018_03_01_preview::Models::RecordSet.mapper
       @actual = client.serialize(request_mapper, actual)
       if @actual != x
-        puts "expected #{ x.inspect} but got #{ @actual.inspect }"
+        #puts "expected #{ x.inspect} but got #{ @actual.inspect }"
       end
       @actual == x
     end
