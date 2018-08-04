@@ -8,6 +8,18 @@ include Azure::Dns::Mgmt::V2018_03_01_preview::Models
 describe DDNSSD::Backend::Azure do
   uses_logger
 
+  RSpec::Matchers.define :match_azure_record do |x|
+    match do |actual|
+      client = DnsManagementClient.new
+      request_mapper = Azure::Dns::Mgmt::V2018_03_01_preview::Models::RecordSet.mapper
+      @actual = client.serialize(request_mapper, actual)
+      if @actual != x
+        puts "expected #{ x.inspect} but got #{ @actual.inspect }"
+      end
+      @actual == x
+    end
+  end
+
   let(:base_env) do
     {
       "DDNSSD_HOSTNAME"        => "speccy",
@@ -135,7 +147,7 @@ describe DDNSSD::Backend::Azure do
 
     context "with an A record" do
       it "upserts the A record" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "A", {"properties"=>{"TTL"=>42, "ARecords"=>[{"ipv4Address"=>"192.0.2.42"}]}})
+        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "A", match_azure_record({"properties"=>{"TTL"=>42, "ARecords"=>[{"ipv4Address"=>"192.0.2.42"}]}}))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :A, "192.0.2.42"))
@@ -144,7 +156,7 @@ describe DDNSSD::Backend::Azure do
 
     context "with a AAAA record" do
       it "upserts the AAAA record" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "AAAA", {"properties"=>{"TTL"=>42, "AAAARecords"=>[{"ipv6Address"=>"2001:DB8::42"}]}})
+        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "AAAA", match_azure_record({"properties"=>{"TTL"=>42, "AAAARecords"=>[{"ipv6Address"=>"2001:DB8::42"}]}}))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
@@ -153,7 +165,7 @@ describe DDNSSD::Backend::Azure do
 
     context "with a CNAME record" do
       it "upserts the CNAME record" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "db", "CNAME", {"properties"=>{"TTL"=>42, "CNAMERecord"=>{"cname"=>"pgsql.host27.example.com"}}})
+        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "db", "CNAME", match_azure_record({"properties"=>{"TTL"=>42, "CNAMERecord"=>{"cname"=>"pgsql.host27.example.com"}}}))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("db.example.com", 42, :CNAME, "pgsql.host27.example.com"))
@@ -162,17 +174,24 @@ describe DDNSSD::Backend::Azure do
 
     context "with a TXT record" do
       it "upserts the TXT record" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "TXT", [{"value"=>['something "funny"', "this too"]}])
+        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "TXT", match_azure_record({"properties"=>{"TTL"=>42, "TXTRecords"=>[{"value"=>["something \"funny\"", "this too"]}]}}))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, 'something "funny"', "this too"))
+      end
+
+      it "works around an azure limitation of blank records by upserting a blank TXT record via an empty hash" do
+        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "TXT", {})
+        expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
+
+        backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, ""))
       end
     end
 
     context "with a SRV record" do
       context "no existing recordset" do
         it "creates a new SRV record" do
-          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", anything)
+          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", match_azure_record({"properties"=>{"TTL"=>42, "SRVRecords"=>[{"priority" => "0", "weight" => "0", "port" => "80", "target" => "faff.host22.example.com"}]}}))
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
           backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))

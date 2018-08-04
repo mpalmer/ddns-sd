@@ -117,8 +117,9 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar }
       end
       @logger.debug(progname) { "-> get_azure_recordset_format(#{rrset.inspect})" }
-      if r.type.to_s == "TXT"
-        rrset.txt_records
+      # Hack to get azure to update with blank txt records
+      if r.type.to_s == "TXT" && r.data.strings.reject { |er| er.empty? }.empty?
+        {}
       else
         rrset
       end
