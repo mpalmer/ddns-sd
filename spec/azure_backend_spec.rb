@@ -136,7 +136,9 @@ describe DDNSSD::Backend::Azure do
   describe "#publish_record" do
 
     before(:each) do
-      allow(az_client.record_sets).to receive(:create_or_update)
+      allow(az_client.record_sets).to receive(:create_or_update).and_return(OpenStruct.new({etag: "1"}))
+      allow(az_client.record_sets).to receive(:update).and_return(OpenStruct.new({etag: "1"}))
+      allow(az_client.record_sets).to receive(:create).and_return(OpenStruct.new({etag: "1"}))
     end
 
     context "with an NS record" do
@@ -147,7 +149,14 @@ describe DDNSSD::Backend::Azure do
 
     context "with an A record" do
       it "upserts the A record" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "A", match_azure_record({"properties"=>{"TTL"=>42, "ARecords"=>[{"ipv4Address"=>"192.0.2.42"}]}}))
+        expect(az_client.record_sets).to receive(:create_or_update).with(
+                                           config.backend_config["RESOURCE_GROUP_NAME"],
+                                           config.base_domain,
+                                           "flingle",
+                                           "A",
+                                           match_azure_record(
+                                             {"properties"=>{"TTL"=>42, "ARecords"=>[{"ipv4Address"=>"192.0.2.42"}]}}),
+                                           if_match: nil)
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :A, "192.0.2.42"))
@@ -156,7 +165,14 @@ describe DDNSSD::Backend::Azure do
 
     context "with a AAAA record" do
       it "upserts the AAAA record" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "AAAA", match_azure_record({"properties"=>{"TTL"=>42, "AAAARecords"=>[{"ipv6Address"=>"2001:DB8::42"}]}}))
+        expect(az_client.record_sets).to receive(:create_or_update).with(
+                                           config.backend_config["RESOURCE_GROUP_NAME"],
+                                           config.base_domain,
+                                           "flingle",
+                                           "AAAA",
+                                           match_azure_record(
+                                             {"properties"=>{"TTL"=>42, "AAAARecords"=>[{"ipv6Address"=>"2001:DB8::42"}]}}),
+                                           if_match: nil)
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
@@ -165,7 +181,13 @@ describe DDNSSD::Backend::Azure do
 
     context "with a CNAME record" do
       it "upserts the CNAME record" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "db", "CNAME", match_azure_record({"properties"=>{"TTL"=>42, "CNAMERecord"=>{"cname"=>"pgsql.host27.example.com"}}}))
+        expect(az_client.record_sets).to receive(:create_or_update).with(
+                                           config.backend_config["RESOURCE_GROUP_NAME"],
+                                           config.base_domain,
+                                           "db",
+                                           "CNAME",
+                                           match_azure_record({"properties"=>{"TTL"=>42, "CNAMERecord"=>{"cname"=>"pgsql.host27.example.com"}}}),
+                                           if_match: nil)
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("db.example.com", 42, :CNAME, "pgsql.host27.example.com"))
@@ -174,14 +196,20 @@ describe DDNSSD::Backend::Azure do
 
     context "with a TXT record" do
       it "upserts the TXT record" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "TXT", match_azure_record({"properties"=>{"TTL"=>42, "TXTRecords"=>[{"value"=>["something \"funny\"", "this too"]}]}}))
+        expect(az_client.record_sets).to receive(:create_or_update).with(
+                                           config.backend_config["RESOURCE_GROUP_NAME"],
+                                           config.base_domain,
+                                           "faff._http._tcp",
+                                           "TXT",
+                                           match_azure_record({"properties"=>{"TTL"=>42, "TXTRecords"=>[{"value"=>["something \"funny\"", "this too"]}]}}),
+                                           if_match: nil)
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, 'something "funny"', "this too"))
       end
 
       it "works around an azure limitation of blank records by upserting a blank TXT record via an empty hash" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "TXT", {})
+        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "TXT", {}, if_match: nil)
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, ""))
@@ -191,7 +219,14 @@ describe DDNSSD::Backend::Azure do
     context "with a SRV record" do
       context "no existing recordset" do
         it "creates a new SRV record" do
-          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", match_azure_record({"properties"=>{"TTL"=>42, "SRVRecords"=>[{"priority" => "0", "weight" => "0", "port" => "80", "target" => "faff.host22.example.com"}]}}))
+          expect(az_client.record_sets).to receive(:create_or_update).with(
+                                             config.backend_config["RESOURCE_GROUP_NAME"],
+                                             config.base_domain,
+                                             "faff._http._tcp",
+                                             "SRV",
+                                             match_azure_record(
+                                               {"properties"=>{"TTL"=>42, "SRVRecords"=>[{"priority" => "0", "weight" => "0", "port" => "80", "target" => "faff.host22.example.com"}]}}),
+                                             if_none_match: "*")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
           backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
@@ -201,6 +236,7 @@ describe DDNSSD::Backend::Azure do
       context "with existing records for the name/type" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host1.example.com"),
             DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host3.example.com")
           )
@@ -208,7 +244,7 @@ describe DDNSSD::Backend::Azure do
 
         #TODO better tests for this?
         it "adds a SRV record to the existing recordset" do
-          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", anything)
+          expect(az_client.record_sets).to receive(:update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", anything, if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
           backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
@@ -219,6 +255,7 @@ describe DDNSSD::Backend::Azure do
       context "with the record already existent" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host1.example.com"),
             DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host3.example.com"),
             DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com")
@@ -227,7 +264,7 @@ describe DDNSSD::Backend::Azure do
 
         #TODO better tests for this?
         it "makes sure we're up-to-date" do
-          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", anything)
+          expect(az_client.record_sets).to receive(:update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", anything, if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
           backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
@@ -238,7 +275,7 @@ describe DDNSSD::Backend::Azure do
     context "with a PTR record" do
       context "no existing recordset" do
         it "creates a new PTR record" do
-          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR", anything)
+          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR", anything, if_none_match: "*")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
           backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
@@ -248,6 +285,7 @@ describe DDNSSD::Backend::Azure do
       context "with existing records for the name/type" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "xyzzy._http._tcp.example.com"),
             DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "argle._http._tcp.example.com")
           )
@@ -255,7 +293,7 @@ describe DDNSSD::Backend::Azure do
 
         #TODO better tests for this
         it "adds a PTR record to the existing recordset" do
-          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR", anything)
+          expect(az_client.record_sets).to receive(:update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR", anything, if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
           backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
@@ -265,12 +303,13 @@ describe DDNSSD::Backend::Azure do
       context "including the one we want to add" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com")
           )
         end
 
         it "runs a no-change change to ensure everything's up-to-date" do
-          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR", anything)
+          expect(az_client.record_sets).to receive(:update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR", anything, if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
           backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
@@ -281,16 +320,24 @@ describe DDNSSD::Backend::Azure do
 
 
   describe "#suppress_record" do
+    before(:each) do
+
+      allow(az_client.record_sets).to receive(:create).and_return(OpenStruct.new({etag: "1"}))
+      allow(az_client.record_sets).to receive(:update).and_return(OpenStruct.new({etag: "1"}))
+      allow(az_client.record_sets).to receive(:create_or_update).and_return(OpenStruct.new({etag: "1"}))
+      allow(az_client.record_sets).to receive(:delete)
+    end
     context "with an A record" do
       context "with no other records in the set" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42")
           )
         end
 
         it "deletes the record set" do
-          expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "abcd1234.flingle", "A")
+          expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "abcd1234.flingle", "A", if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
           backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
@@ -300,6 +347,7 @@ describe DDNSSD::Backend::Azure do
       context "with other records in the set" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.1"),
             DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"),
             DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.180")
@@ -308,7 +356,7 @@ describe DDNSSD::Backend::Azure do
 
         # TODO - better tests
         it "modifies the record set to remove our record" do
-          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "abcd1234.flingle", "A", anything)
+          expect(az_client.record_sets).to receive(:update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "abcd1234.flingle", "A", anything, if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
           expect(az_client.record_sets).to_not receive(:delete)
 
@@ -320,13 +368,14 @@ describe DDNSSD::Backend::Azure do
       context "with our record already gone" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.1"),
             DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.180")
           )
         end
 
         it "makes a no-op request to make sure everything is up-to-date" do
-          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "abcd1234.flingle", "A", anything)
+          expect(az_client.record_sets).to receive(:update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "abcd1234.flingle", "A", anything, if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
           expect(az_client.record_sets).to_not receive(:delete)
 
@@ -339,12 +388,13 @@ describe DDNSSD::Backend::Azure do
       context "with no other records in the set" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42")
           )
         end
 
         it "deletes the record set" do
-          expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "AAAA")
+          expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "AAAA", if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
           backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
@@ -354,6 +404,7 @@ describe DDNSSD::Backend::Azure do
       context "with other records in the set" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::1"),
             DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"),
             DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::180")
@@ -362,7 +413,7 @@ describe DDNSSD::Backend::Azure do
 
         # TODO - better tests
         it "modifies the record set to remove our record" do
-          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "AAAA", anything)
+          expect(az_client.record_sets).to receive(:update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "AAAA", anything, if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
           expect(az_client.record_sets).to_not receive(:delete)
 
@@ -373,6 +424,7 @@ describe DDNSSD::Backend::Azure do
       context "with our record already gone" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::1"),
             DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::180")
           )
@@ -380,7 +432,7 @@ describe DDNSSD::Backend::Azure do
 
         # TODO - better tests
         it "makes a no-op request to make sure everything is up-to-date" do
-          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "AAAA", anything)
+          expect(az_client.record_sets).to receive(:update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "AAAA", anything, if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
           expect(az_client.record_sets).to_not receive(:delete)
 
@@ -394,12 +446,13 @@ describe DDNSSD::Backend::Azure do
       context "with no other records in the set" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host42.example.com")
           )
         end
 
         it "deletes the record set" do
-          expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "CNAME")
+          expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "CNAME", if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
           backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host42.example.com"))
@@ -409,6 +462,7 @@ describe DDNSSD::Backend::Azure do
       context "with other records in the set" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host1.example.com"),
             DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host42.example.com"),
             DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host180.example.com")
@@ -417,7 +471,7 @@ describe DDNSSD::Backend::Azure do
 
         #TODO better tests...
         it "modifies the record set to remove our record" do
-          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "CNAME", anything)
+          expect(az_client.record_sets).to receive(:update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "CNAME", anything, if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
           expect(az_client.record_sets).to_not receive(:delete)
 
@@ -428,13 +482,14 @@ describe DDNSSD::Backend::Azure do
       context "with our record already gone" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host1.example.com"),
             DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host180.example.com")
           )
         end
 
         it "makes a no-op request to make sure everything is up-to-date" do
-          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "CNAME", anything)
+          expect(az_client.record_sets).to receive(:update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "flingle", "CNAME", anything, if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
           expect(az_client.record_sets).to_not receive(:delete)
 
@@ -447,6 +502,7 @@ describe DDNSSD::Backend::Azure do
       context "with other SRV records present" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host1.example.com"),
             DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host2.example.com")
           )
@@ -454,7 +510,7 @@ describe DDNSSD::Backend::Azure do
 
         #TODO better tests
         it "deletes our SRV record from the record set" do
-          expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", anything)
+          expect(az_client.record_sets).to receive(:update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", anything, if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
           expect(az_client.record_sets).to_not receive(:delete)
 
@@ -466,9 +522,11 @@ describe DDNSSD::Backend::Azure do
       context "with no other SRV records present" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host1.example.com")
           )
           backend.instance_variable_get(:@record_cache).set(
+            "etag",
             DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, "something funny")
           )
         end
@@ -476,14 +534,15 @@ describe DDNSSD::Backend::Azure do
         context "with no other PTR records" do
           before(:each) do
             backend.instance_variable_get(:@record_cache).set(
+              "etag",
               DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com")
             )
           end
 
           it "deletes the SRV, TXT, and PTR record sets" do
-            expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV")
-            expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR")
-            expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "TXT")
+            expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", if_match: "etag")
+            expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR", if_match: "etag")
+            expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "TXT", if_match: "etag")
             expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
             backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host1.example.com"))
@@ -493,17 +552,18 @@ describe DDNSSD::Backend::Azure do
         context "with other PTR records" do
           before(:each) do
             backend.instance_variable_get(:@record_cache).set(
+              "etag",
               DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "blargh._http._tcp.example.com"),
               DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com")
             )
           end
 
           it "deletes the SRV and TXT record sets, and prunes our record from the PTR record set" do
-            expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV")
-            expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "TXT")
-            expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR", anything)
+            expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", if_match: "etag")
+            expect(az_client.record_sets).to receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "TXT", if_match: "etag")
+            expect(az_client.record_sets).to receive(:update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR", anything, if_match: "etag")
             expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
-            expect(az_client.record_sets).to_not receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR")
+            expect(az_client.record_sets).to_not receive(:delete).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR", if_match: "etag")
 
             backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host1.example.com"))
           end

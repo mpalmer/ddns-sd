@@ -162,20 +162,27 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       @cache[name][type]
     end
 
+    def get_etag(name, type)
+      @etag_cache[name][type]
+    end
+
     def all_of_type(type)
       @cache.values.map { |v| v[type] }.flatten.compact
     end
 
-    def add(rr)
+    def add(etag, rr)
       @cache[rr.name][rr.type] << rr unless @cache[rr.name][rr.type].include?(rr)
+      @etag_cache[rr.name][rr.type] = etag
     end
 
     def remove(rr)
       @cache[rr.name][rr.type].delete(rr)
+      @etag_cache[rr.name][rr.type] = nil
     end
 
-    def set(*rr)
+    def set(etag, *rr)
       @cache[rr.first.name][rr.first.type] = rr
+      @etag_cache[rr.first.name][rr.first.type] = etag
     end
 
     def refresh_all
@@ -202,6 +209,9 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       @cache = Hash.new do |oh, ok|
         oh[ok] = Hash.new { |ih, ik| ih[ik] = [] }
       end
+      @etag_cache = Hash.new do |oh, ok|
+        oh[ok] = Hash.new { |ih, ik| ih[ik] = nil }
+      end
     end
 
     private
@@ -225,6 +235,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       name = az_rset_name rrset
       records = convert_to_dnssd_record(rrset)
       @cache[name][record_type] = records
+      @etag_cache[name][record_type] = rrset.etag
     end
   end
 
@@ -270,8 +281,8 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
   def set_record(rr)
     @logger.debug(progname) { "-> set_record(#{rr.inspect})" }
-    update [rr]
-    @record_cache.set(rr)
+    az_records = create_or_update [rr]
+    @record_cache.set(az_records.etag, rr)
     @logger.debug(progname) { "<- set_record(#{rr.inspect})" }
   end
 
@@ -286,12 +297,12 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       existing_records = @record_cache.get(rr.name, rr.type)
 
       if existing_records.empty?
-        update [rr]
+        az_records = create [rr]
       else
-        update (existing_records + [rr]).uniq
+        az_records = update (existing_records + [rr]).uniq
       end
 
-      @record_cache.add(rr)
+      @record_cache.add(az_records.etag, rr)
       @logger.debug(progname) { "<- add_record(#{rr.inspect})" }
     rescue StandardError => ex
       if tries_left > 0
@@ -429,7 +440,15 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
   def update(records)
     r = records.first
     records = get_azure_recordset_format(records)
-    @client.record_sets.create_or_update(@resource_group_name, @zone_name, r.name.sub(Regexp.new(".#{@zone_name}"), ""), r.type.to_s, records)
+    etag = @record_cache.get_etag(r.name, r.type)
+    @client.record_sets.update(@resource_group_name, @zone_name, r.name.sub(Regexp.new(".#{@zone_name}"), ""), r.type.to_s, records, if_match: etag)
+  end
+
+  def create_or_update(records)
+    r = records.first
+    records = get_azure_recordset_format(records)
+    etag = @record_cache.get_etag(r.name, r.type)
+    @client.record_sets.create_or_update(@resource_group_name, @zone_name, r.name.sub(Regexp.new(".#{@zone_name}"), ""), r.type.to_s, records, if_match: etag)
   end
 
   def create(records)
@@ -442,6 +461,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
   def delete(records)
     r = records.first
-    @client.record_sets.delete(@resource_group_name, @zone_name, r.name.sub(Regexp.new(".#{@zone_name}"), ""), r.type.to_s)
+    etag = @record_cache.get_etag(r.name, r.type)
+    @client.record_sets.delete(@resource_group_name, @zone_name, r.name.sub(Regexp.new(".#{@zone_name}"), ""), r.type.to_s, if_match: etag)
   end
 end
