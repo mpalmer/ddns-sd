@@ -28,6 +28,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
           next_timeout *= 2
           retry
         else
+          @logger.info(progname) { "Received #{ex.class} - #{ex.backtrace}" }
           raise RetryError, "Attempted request 10 times, got a retryable error every time. This is not normal. Giving up."
         end
       end
