@@ -270,6 +270,39 @@ describe DDNSSD::Backend::Azure do
           backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
         end
       end
+
+      context "on error" do
+        before do
+          allow(az_client.record_sets).to receive(:create_or_update).and_return(OpenStruct.new({etag: "1"}))
+          allow(az_client.record_sets).to receive(:update).and_return(OpenStruct.new({etag: "1"}))
+        end
+
+        context "with records changing" do
+          it "refreshes the zone data and retries the request with the new values" do
+            expect(az_client.record_sets).to receive(:create_or_update).and_throw(MsRestAzure::AzureOperationError)
+            expect(az_client.record_sets).to receive(:create_or_update)
+            expect(az_client.record_sets).to receive(:get)
+
+            backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+          end
+        end
+
+        context "and never resolving" do
+
+          before do
+            allow(az_client.record_sets).to receive(:create_or_update).and_throw(MsRestAzure::AzureOperationError)
+          end
+
+          it "retries for a while then gives up" do
+            expect(az_client.record_sets).to receive(:create_or_update).exactly(10).times
+            expect(az_client.record_sets).to receive(:get).exactly(9).times
+
+            expect(logger).to receive(:error)
+
+            backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+          end
+        end
+      end
     end
 
     context "with a PTR record" do
