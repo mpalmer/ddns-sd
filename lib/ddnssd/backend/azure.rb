@@ -35,21 +35,41 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
   end
 
   module RecordSetHelper
-    def get_records_from_record_set(rrset)
-      @logger.debug(progname) { "-> get_records_from_record_set(#{rrset.inspect})" }
-      case rrset.type
-      when "Microsoft.Network/dnszones/A" then rrset.arecords.map { |r| { type: "A", value: r.ipv4address } }
-      when "Microsoft.Network/dnszones/AAAA" then rrset.aaaa_records.map { |r| { type: "AAAA", value: r.ipv6address } }
-      when "Microsoft.Network/dnszones/MX" then rrset.mx_records.map { |r| { type: "MX", value: "#{ r.preference } #{ r.exchange }" }}
-      when "Microsoft.Network/dnszones/NS" then rrset.ns_records.map { |r| { type: "NS", value: r.nsdname } }
-      when "Microsoft.Network/dnszones/PTR" then rrset.ptr_records.map { |r| { type: "PTR", value: r.ptrdname } }
-      when "Microsoft.Network/dnszones/SRV" then rrset.srv_records.map { |r| { type: "SRV", value: "#{ r.priority } #{ r.weight } #{ r.port } #{ r.target }" } }
-      when "Microsoft.Network/dnszones/TXT" then rrset.txt_records.map { |r| { type: "TXT", value: r.value } }
-      when "Microsoft.Network/dnszones/CNAME" then [{ type: "CNAME", value: rrset.cname_record.cname }]
-      when "Microsoft.Network/dnszones/SOA" then [{ type: "SOA", value: "#{ rrset.soa_record.host } #{ rrset.soa_record.email } #{ rrset.soa_record.serial_number } #{ rrset.soa_record.refresh_time } #{ rrset.soa_record.retry_time } #{ rrset.soa_record.expire_time } #{ rrset.soa_record.minimum_ttl }" }]
-      when "Microsoft.Network/dnszones/CAA" then rrset.caa_records.map { |r| { type: "CAA", value: "#{ r.flags } #{ r.tag } #{ r.value }" } }
-      else []
+    def az_rset_type(rrset)
+      rrset.type.split("/").last.to_sym
+    end
+    def az_rset_name(rrset)
+      "#{ rrset.name }.#{ @zone_name }".chomp(".")
+    end
+    def convert_to_dnssd_record(rrset)
+      record_type = az_rset_type rrset
+      full_name = az_rset_name rrset
+
+      records_raw =
+        case record_type
+        when :A then rrset.arecords.map { |r| { type: "A", value: r.ipv4address } }
+        when :AAAA then rrset.aaaa_records.map { |r| { type: "AAAA", value: r.ipv6address } }
+        when :MX then rrset.mx_records.map { |r| { type: "MX", value: "#{ r.preference } #{ r.exchange }" }}
+        when :NS then rrset.ns_records.map { |r| { type: "NS", value: r.nsdname } }
+        when :PTR then rrset.ptr_records.map { |r| { type: "PTR", value: r.ptrdname } }
+        when :SRV then rrset.srv_records.map { |r| { type: "SRV", value: "#{ r.priority } #{ r.weight } #{ r.port } #{ r.target }" } }
+        when :TXT then rrset.txt_records.map { |r| { type: "TXT", value: r.value } }
+        when :CNAME then [{ type: "CNAME", value: rrset.cname_record.cname }]
+        when :SOA then [{ type: "SOA", value: "#{ rrset.soa_record.host } #{ rrset.soa_record.email } #{ rrset.soa_record.serial_number } #{ rrset.soa_record.refresh_time } #{ rrset.soa_record.retry_time } #{ rrset.soa_record.expire_time } #{ rrset.soa_record.minimum_ttl }" }]
+        when :CAA then rrset.caa_records.map { |r| { type: "CAA", value: "#{ r.flags } #{ r.tag } #{ r.value }" } }
+        else []
+        end
+
+      dnssd_records = records_raw.map do |rr|
+        rrdata = if record_type == :TXT
+          rr[:value]
+        else
+          rr[:value].split(/\s+/).map { |v| v =~ /\A\d+\z/ ? v.to_i : v }
+        end
+
+        DDNSSD::DNSRecord.new(full_name, rrset.ttl, record_type, *rrdata)
       end
+      {type: record_type, name: full_name, records: dnssd_records}
     end
 
     def get_azure_recordset_format(records)
@@ -58,30 +78,30 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       rrset.ttl = r.ttl
       rrset.name = r.name.sub(Regexp.new(".#{@zone_name}"), "")
       rrset.type = r.type.to_s
-      case r.type.to_s
-      when "A" then rrset.arecords = records.map { |r|
+      case r.type
+      when :A then rrset.arecords = records.map { |r|
                       ar = ARecord.new
                       ar.ipv4address = r.value
                       ar }
-      when "AAAA" then rrset.aaaa_records = records.map { |r|
+      when :AAAA then rrset.aaaa_records = records.map { |r|
                          ar = AaaaRecord.new
                          ar.ipv6address = r.value
                          ar  }
-      when "MX" then rrset.mx_records = records.map { |r|
+      when :MX then rrset.mx_records = records.map { |r|
                        v = r.value.split(" ")
                        ar = MxRecord.new
                        ar.preference = v[0]
                        ar.exchange = v[1]
                        ar }
-      when "NS" then rrset.ns_records = records.map { |r|
+      when :NS then rrset.ns_records = records.map { |r|
                        ar = NsRecord.new
                        ar.nsdname = r.value
                        ar }
-      when "PTR" then rrset.ptr_records = records.map { |r|
+      when :PTR then rrset.ptr_records = records.map { |r|
                         ar = PtrRecord.new
                         ar.ptrdname = r.value
                         ar }
-      when "SRV" then rrset.srv_records = records.map { |r|
+      when :SRV then rrset.srv_records = records.map { |r|
                         v = r.value.split(" ")
                         ar = SrvRecord.new
                         ar.priority = v[0]
@@ -89,15 +109,15 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar.port = v[2]
                         ar.target = v[3]
                         ar }
-      when "TXT" then rrset.txt_records = records.map { |r|
+      when :TXT then rrset.txt_records = records.map { |r|
                         ar = TxtRecord.new
                         ar.value = r.data.strings
                         ar }
-      when "CNAME" then rrset.cname_record = records.map { |r|
+      when :CNAME then rrset.cname_record = records.map { |r|
                           ar = CnameRecord.new
                           ar.cname = r.value
                           ar }.first
-      when "SOA" then rrset.soa_record = records.map { |r|
+      when :SOA then rrset.soa_record = records.map { |r|
                         v = r.value.split(" ")
                         ar = SoaRecord.new
                         ar.host = v[0]
@@ -108,7 +128,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar.expire_time = v[5]
                         ar.minimum_ttl = v[6]
                         ar }.first
-      when "CAA" then rrset.caa_records = records.map { |r|
+      when :CAA then rrset.caa_records = records.map { |r|
                         v = r.value.split(" ")
                         ar = CaaRecord.new
                         ar.flags = v[0]
@@ -202,17 +222,8 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     end
 
     def import_rrset(rrset)
-      record_type = rrset.type.split("/").last.to_sym
-      full_name = "#{ rrset.name }.#{ @zone_name }".chomp(".")
-      @cache[full_name][record_type] = get_records_from_record_set(rrset).map do |rr|
-        rrdata = if record_type == :TXT
-          rr[:value]
-        else
-          rr[:value].split(/\s+/).map { |v| v =~ /\A\d+\z/ ? v.to_i : v }
-        end
-
-        DDNSSD::DNSRecord.new(full_name, rrset.ttl, record_type, *rrdata)
-      end
+      records = convert_to_dnssd_record(rrset)
+      @cache[records[:name]][records[:type]] = records[:records]
     end
   end
 
@@ -418,6 +429,14 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     r = records.first
     records = get_azure_recordset_format(records)
     @client.record_sets.create_or_update(@resource_group_name, @zone_name, r.name.sub(Regexp.new(".#{@zone_name}"), ""), r.type.to_s, records)
+  end
+
+  def create(records)
+    r = records.first
+    records = get_azure_recordset_format(records)
+    # create_or_update with if none match to prevent updating an existing record set.
+    # https://github.com/Azure/azure-sdk-for-ruby/blob/master/management/azure_mgmt_dns/lib/2018-03-01-preview/generated/azure_mgmt_dns/record_sets.rb#L182
+    @client.record_sets.create_or_update(@resource_group_name, @zone_name, r.name.sub(Regexp.new(".#{@zone_name}"), ""), r.type.to_s, records, if_none_match: "*")
   end
 
   def delete(records)
