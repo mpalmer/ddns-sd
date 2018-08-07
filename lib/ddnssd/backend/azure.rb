@@ -196,7 +196,11 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
     def refresh(name, type)
       rrset = retryable do
-        @client.record_sets.get(@resource_group_name, @zone_name, name, type)
+        begin
+          @client.record_sets.get(@resource_group_name, @zone_name, name, type)
+        rescue MsRestAzure::AzureOperationError
+          nil
+        end
       end
 
       if rrset
@@ -305,7 +309,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
       @record_cache.add(az_records.etag, rr)
       @logger.debug(progname) { "<- add_record(#{rr.inspect})" }
-    rescue StandardError => ex
+    rescue MsRestAzure::AzureOperationError => ex
       if tries_left > 0
         @logger.debug(progname) { "Received InvalidChangeBatch; refreshing record set for #{rr.name} #{rr.type}" }
 
@@ -329,7 +333,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       change_to_remove_record_from_set(@record_cache.get(rr.name, rr.type), rr)
       @record_cache.remove(rr)
       @logger.debug(progname) { "<- remove_record(#{rr.inspect})" }
-    rescue StandardError => ex
+    rescue MsRestAzure::AzureOperationError => ex
       if tries_left > 0
         @logger.debug(progname) { "Received InvalidChangeBatch; refreshing record set for #{rr.name} #{rr.type}" }
 

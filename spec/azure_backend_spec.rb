@@ -274,12 +274,23 @@ describe DDNSSD::Backend::Azure do
       context "on error" do
         let(:refreshed_response) { azure_response_fixture("faff_response").first }
 
-        context "with records changing" do
+        context "with records added" do
           it "refreshes the zone data and retries the request with the new values" do
             expect(az_client.record_sets).to receive(:create_or_update).and_raise(MsRestAzure::AzureOperationError, "test").ordered
             expect(az_client.record_sets).to receive(:get).and_return(refreshed_response).ordered
 
             expect(az_client.record_sets).to receive(:update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", anything, if_match: "faff_etag").and_return(OpenStruct.new({etag: "other"})).ordered
+
+            backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+          end
+        end
+
+        context "with records removed" do
+          it "refreshes the zone data and retries the request with the new values" do
+            expect(az_client.record_sets).to receive(:create_or_update).and_raise(MsRestAzure::AzureOperationError, "test").ordered
+            expect(az_client.record_sets).to receive(:get).and_raise(MsRestAzure::AzureOperationError, "404 doesn't exist").ordered
+
+            expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", anything, if_none_match: "*").and_return(OpenStruct.new({etag: "other"})).ordered
 
             backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
           end
