@@ -155,8 +155,7 @@ describe DDNSSD::Backend::Azure do
                                            "flingle",
                                            "A",
                                            match_azure_record(
-                                             {"properties"=>{"TTL"=>42, "ARecords"=>[{"ipv4Address"=>"192.0.2.42"}]}}),
-                                           if_match: nil)
+                                             {"properties"=>{"TTL"=>42, "ARecords"=>[{"ipv4Address"=>"192.0.2.42"}]}}))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :A, "192.0.2.42"))
@@ -171,8 +170,7 @@ describe DDNSSD::Backend::Azure do
                                            "flingle",
                                            "AAAA",
                                            match_azure_record(
-                                             {"properties"=>{"TTL"=>42, "AAAARecords"=>[{"ipv6Address"=>"2001:DB8::42"}]}}),
-                                           if_match: nil)
+                                             {"properties"=>{"TTL"=>42, "AAAARecords"=>[{"ipv6Address"=>"2001:DB8::42"}]}}))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
@@ -186,8 +184,7 @@ describe DDNSSD::Backend::Azure do
                                            config.base_domain,
                                            "db",
                                            "CNAME",
-                                           match_azure_record({"properties"=>{"TTL"=>42, "CNAMERecord"=>{"cname"=>"pgsql.host27.example.com"}}}),
-                                           if_match: nil)
+                                           match_azure_record({"properties"=>{"TTL"=>42, "CNAMERecord"=>{"cname"=>"pgsql.host27.example.com"}}}))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("db.example.com", 42, :CNAME, "pgsql.host27.example.com"))
@@ -201,15 +198,14 @@ describe DDNSSD::Backend::Azure do
                                            config.base_domain,
                                            "faff._http._tcp",
                                            "TXT",
-                                           match_azure_record({"properties"=>{"TTL"=>42, "TXTRecords"=>[{"value"=>["something \"funny\"", "this too"]}]}}),
-                                           if_match: nil)
+                                           match_azure_record({"properties"=>{"TTL"=>42, "TXTRecords"=>[{"value"=>["something \"funny\"", "this too"]}]}}))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, 'something "funny"', "this too"))
       end
 
       it "works around an azure limitation of blank records by upserting a blank TXT record via an empty hash" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "TXT", {}, if_match: nil)
+        expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "TXT", {})
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, ""))

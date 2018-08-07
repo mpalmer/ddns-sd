@@ -452,8 +452,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
   def create_or_update(records)
     r = records.first
     records = get_azure_recordset_format(records)
-    etag = @record_cache.get_etag(r.name, r.type)
-    @client.record_sets.create_or_update(@resource_group_name, @zone_name, r.name.sub(Regexp.new(".#{@zone_name}"), ""), r.type.to_s, records, if_match: etag)
+    @client.record_sets.create_or_update(@resource_group_name, @zone_name, r.name.sub(Regexp.new(".#{@zone_name}"), ""), r.type.to_s, records)
   end
 
   def create(records)
