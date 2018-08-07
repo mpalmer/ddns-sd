@@ -1,0 +1,18 @@
+[
+  {
+    "type": "Microsoft.Network/dnszones/SRV",
+    "etag": "faff_etag",
+    "name": "faff._http._tcp",
+    "properties": {
+      "TTL": 3600,
+      "SRVRecords": [
+        {
+          "priority": 1,
+          "weight": 1,
+          "port": 8080,
+          "target": "example.com"
+        }
+      ]
+    }
+  }
+]

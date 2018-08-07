@@ -272,16 +272,14 @@ describe DDNSSD::Backend::Azure do
       end
 
       context "on error" do
-        before do
-          allow(az_client.record_sets).to receive(:create_or_update).and_return(OpenStruct.new({etag: "1"}))
-          allow(az_client.record_sets).to receive(:update).and_return(OpenStruct.new({etag: "1"}))
-        end
+        let(:refreshed_response) { azure_response_fixture("faff_response").first }
 
         context "with records changing" do
           it "refreshes the zone data and retries the request with the new values" do
-            expect(az_client.record_sets).to receive(:create_or_update).and_throw(MsRestAzure::AzureOperationError)
-            expect(az_client.record_sets).to receive(:create_or_update)
-            expect(az_client.record_sets).to receive(:get)
+            expect(az_client.record_sets).to receive(:create_or_update).and_raise(MsRestAzure::AzureOperationError, "test").ordered
+            expect(az_client.record_sets).to receive(:get).and_return(refreshed_response).ordered
+
+            expect(az_client.record_sets).to receive(:update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "faff._http._tcp", "SRV", anything, if_match: "faff_etag").and_return(OpenStruct.new({etag: "other"})).ordered
 
             backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
           end
@@ -289,13 +287,13 @@ describe DDNSSD::Backend::Azure do
 
         context "and never resolving" do
 
-          before do
-            allow(az_client.record_sets).to receive(:create_or_update).and_throw(MsRestAzure::AzureOperationError)
-          end
-
           it "retries for a while then gives up" do
-            expect(az_client.record_sets).to receive(:create_or_update).exactly(10).times
-            expect(az_client.record_sets).to receive(:get).exactly(9).times
+            expect(az_client.record_sets).to receive(:create_or_update).and_raise(MsRestAzure::AzureOperationError, "test").ordered
+
+            9.times do
+              expect(az_client.record_sets).to receive(:get).and_return(refreshed_response).ordered
+              expect(az_client.record_sets).to receive(:update).and_raise(MsRestAzure::AzureOperationError, "test").ordered
+            end
 
             expect(logger).to receive(:error)
 
