@@ -60,7 +60,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
         else []
         end
 
-      dnssd_records = records_raw.map do |rr|
+      records_raw.map do |rr|
         rrdata = if record_type == :TXT
           rr[:value]
         else
@@ -69,7 +69,6 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
         DDNSSD::DNSRecord.new(full_name, rrset.ttl, record_type, *rrdata)
       end
-      {type: record_type, name: full_name, records: dnssd_records}
     end
 
     def get_azure_recordset_format(records)
@@ -222,8 +221,10 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     end
 
     def import_rrset(rrset)
+      record_type = az_rset_type rrset
+      name = az_rset_name rrset
       records = convert_to_dnssd_record(rrset)
-      @cache[records[:name]][records[:type]] = records[:records]
+      @cache[name][record_type] = records
     end
   end
 
