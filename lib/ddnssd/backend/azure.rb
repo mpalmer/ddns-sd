@@ -36,15 +36,17 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
   end
 
   module RecordSetHelper
-    def az_rset_type(rrset)
+    def az_to_dnssd_rset_type(rrset)
       rrset.type.split("/").last.to_sym
     end
-    def az_rset_name(rrset)
+
+    def az_to_dnssd_rset_name(rrset)
       "#{ rrset.name }.#{ @zone_name }".chomp(".")
     end
-    def convert_to_dnssd_record(rrset)
-      record_type = az_rset_type rrset
-      full_name = az_rset_name rrset
+
+    def az_to_dnssd_records(rrset)
+      record_type = az_to_dnssd_rset_type rrset
+      full_name = az_to_dnssd_rset_name rrset
 
       records_raw =
         case record_type
@@ -72,11 +74,15 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
       end
     end
 
-    def get_azure_recordset_format(records)
+    def dnssd_to_az_name(name)
+      name.sub(Regexp.new(".#{@zone_name}"), "")
+    end
+
+    def dnssd_to_az_records(records)
       r = records.first
       rrset = RecordSet.new
       rrset.ttl = r.ttl
-      rrset.name = r.name.sub(Regexp.new(".#{@zone_name}"), "")
+      rrset.name = dnssd_to_az_name r.name
       rrset.type = r.type.to_s
       case r.type
       when :A then rrset.arecords = records.map { |r|
@@ -136,7 +142,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar.value = v[2]
                         ar }
       end
-      @logger.debug(progname) { "-> get_azure_recordset_format(#{rrset.inspect})" }
+      @logger.debug(progname) { "-> dnssd_to_az_records(#{rrset.inspect})" }
       # Hack to get azure to update with blank txt records
       if r.type.to_s == "TXT" && r.data.strings.reject { |er| er.empty? }.empty?
         {}
@@ -197,7 +203,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     def refresh(name, type)
       rrset = retryable do
         begin
-          @client.record_sets.get(@resource_group_name, @zone_name, name.sub(Regexp.new(".#{@zone_name}"), ""), type.to_s)
+          @client.record_sets.get(@resource_group_name, @zone_name, dnssd_to_az_name(name), type.to_s)
         rescue MsRestAzure::AzureOperationError
           nil
         end
@@ -237,9 +243,9 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     end
 
     def import_rrset(rrset)
-      record_type = az_rset_type rrset
-      name = az_rset_name rrset
-      records = convert_to_dnssd_record(rrset)
+      record_type = az_to_dnssd_rset_type rrset
+      name = az_to_dnssd_rset_name rrset
+      records = az_to_dnssd_records(rrset)
       @cache[name][record_type] = records
       @etag_cache[name][record_type] = rrset.etag
     end
@@ -446,28 +452,28 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
   def update(records)
     r = records.first
-    records = get_azure_recordset_format(records)
+    records = dnssd_to_az_records(records)
     etag = @record_cache.get_etag(r.name, r.type)
-    @client.record_sets.update(@resource_group_name, @zone_name, r.name.sub(Regexp.new(".#{@zone_name}"), ""), r.type.to_s, records, if_match: etag)
+    @client.record_sets.update(@resource_group_name, @zone_name, dnssd_to_az_name(r.name), r.type.to_s, records, if_match: etag)
   end
 
   def create_or_update(records)
     r = records.first
-    records = get_azure_recordset_format(records)
-    @client.record_sets.create_or_update(@resource_group_name, @zone_name, r.name.sub(Regexp.new(".#{@zone_name}"), ""), r.type.to_s, records)
+    records = dnssd_to_az_records(records)
+    @client.record_sets.create_or_update(@resource_group_name, @zone_name, dnssd_to_az_name(r.name), r.type.to_s, records)
   end
 
   def create(records)
     r = records.first
-    records = get_azure_recordset_format(records)
+    records = dnssd_to_az_records(records)
     # create_or_update with if none match to prevent updating an existing record set.
     # https://github.com/Azure/azure-sdk-for-ruby/blob/master/management/azure_mgmt_dns/lib/2018-03-01-preview/generated/azure_mgmt_dns/record_sets.rb#L182
-    @client.record_sets.create_or_update(@resource_group_name, @zone_name, r.name.sub(Regexp.new(".#{@zone_name}"), ""), r.type.to_s, records, if_none_match: "*")
+    @client.record_sets.create_or_update(@resource_group_name, @zone_name, dnssd_to_az_name(r.name), r.type.to_s, records, if_none_match: "*")
   end
 
   def delete(records)
     r = records.first
     etag = @record_cache.get_etag(r.name, r.type)
-    @client.record_sets.delete(@resource_group_name, @zone_name, r.name.sub(Regexp.new(".#{@zone_name}"), ""), r.type.to_s, if_match: etag)
+    @client.record_sets.delete(@resource_group_name, @zone_name, dnssd_to_az_name(r.name), r.type.to_s, if_match: etag)
   end
 end
