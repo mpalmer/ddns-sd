@@ -197,7 +197,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     def refresh(name, type)
       rrset = retryable do
         begin
-          @client.record_sets.get(@resource_group_name, @zone_name, name, type)
+          @client.record_sets.get(@resource_group_name, @zone_name, name.sub(Regexp.new(".#{@zone_name}"), ""), type.to_s)
         rescue MsRestAzure::AzureOperationError
           nil
         end
@@ -207,6 +207,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
         import_rrset(rrset)
       else
         @cache[name][type] = []
+        @etag_cache[name][type] = nil
       end
     end
 
@@ -316,6 +317,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
         @record_cache.refresh(rr.name, rr.type)
 
         @logger.debug(progname) { "record set for #{rr.name} #{rr.type} is now #{@record_cache.get(rr.name, rr.type).inspect}" }
+        @logger.debug(progname) { "record set etag for #{rr.name} #{rr.type} is now #{@record_cache.get_etag(rr.name, rr.type).inspect}" }
         retry
       else
         @logger.error(progname) { "Cannot get this add_record change to apply, because #{ex.message}. Giving up." }
