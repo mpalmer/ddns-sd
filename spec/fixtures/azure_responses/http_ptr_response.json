@@ -1,0 +1,15 @@
+[
+  {
+    "type": "Microsoft.Network/dnszones/PTR",
+    "etag": "http_ptr_etag",
+    "name": "_http._tcp",
+    "properties": {
+      "TTL": 3600,
+      "PTRRecords": [
+        {
+          "ptrdname": "baff._http._tcp.example.com"
+        }
+      ]
+    }
+  }
+]

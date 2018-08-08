@@ -353,6 +353,48 @@ describe DDNSSD::Backend::Azure do
           backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
         end
       end
+
+      context "on error" do
+        let(:refreshed_response) { azure_response_fixture("http_ptr_response").first }
+
+        context "with records added" do
+          it "refreshes the zone data and retries the request with the new values" do
+            expect(az_client.record_sets).to receive(:create_or_update).and_raise(MsRestAzure::AzureOperationError, "test").ordered
+            expect(az_client.record_sets).to receive(:get).and_return(refreshed_response).ordered
+
+            expect(az_client.record_sets).to receive(:update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR", anything, if_match: "http_ptr_etag").and_return(OpenStruct.new({etag: "other"})).ordered
+
+            backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+          end
+        end
+
+        context "with records removed" do
+          it "refreshes the zone data and retries the request with the new values" do
+            expect(az_client.record_sets).to receive(:create_or_update).and_raise(MsRestAzure::AzureOperationError, "test").ordered
+            expect(az_client.record_sets).to receive(:get).and_raise(MsRestAzure::AzureOperationError, "404 doesn't exist").ordered
+
+            expect(az_client.record_sets).to receive(:create_or_update).with(config.backend_config["RESOURCE_GROUP_NAME"], config.base_domain, "_http._tcp", "PTR", anything, if_none_match: "*").and_return(OpenStruct.new({etag: "other"})).ordered
+
+            backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+          end
+        end
+
+        context "and never resolving" do
+
+          it "retries for a while then gives up" do
+            expect(az_client.record_sets).to receive(:create_or_update).and_raise(MsRestAzure::AzureOperationError, "test").ordered
+
+            9.times do
+              expect(az_client.record_sets).to receive(:get).and_return(refreshed_response).ordered
+              expect(az_client.record_sets).to receive(:update).and_raise(MsRestAzure::AzureOperationError, "test").ordered
+            end
+
+            expect(logger).to receive(:error)
+
+            backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+          end
+        end
+      end
     end
   end
 
