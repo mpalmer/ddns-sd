@@ -116,8 +116,14 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar.target = v[3]
                         ar }
       when :TXT then rrset.txt_records = records.map { |r|
+                       # Hack to get azure to update with blank txt records
                         ar = TxtRecord.new
-                        ar.value = r.data.strings
+                        ar.value =
+                          if r.data.strings.reject { |er| er.empty? }.empty?
+                            [" "]
+                          else
+                            r.data.strings
+                          end
                         ar }
       when :CNAME then rrset.cname_record = records.map { |r|
                           ar = CnameRecord.new
@@ -143,12 +149,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar }
       end
       @logger.debug(progname) { "-> dnssd_to_az_records(#{rrset.inspect})" }
-      # Hack to get azure to update with blank txt records
-      if r.type.to_s == "TXT" && r.data.strings.reject { |er| er.empty? }.empty?
-        {}
-      else
-        rrset
-      end
+      rrset
     end
   end
 

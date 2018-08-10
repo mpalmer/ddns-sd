@@ -206,8 +206,8 @@ describe DDNSSD::Backend::Azure do
         backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, 'something "funny"', "this too"))
       end
 
-      it "works around an azure limitation of blank records by upserting a blank TXT record via an empty hash" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(rg, zone, "faff._http._tcp", "TXT", {})
+      it "works around an azure limitation of blank records by upserting a TXT record with a space" do
+        expect(az_client.record_sets).to receive(:create_or_update).with(rg, zone, "faff._http._tcp", "TXT", match_azure_record({"properties"=>{"TTL"=>42, "TXTRecords"=>[{"value"=>[" "]}]}}))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, ""))
