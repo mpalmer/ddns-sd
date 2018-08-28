@@ -18,7 +18,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
       begin
         tries_left -= 1
         yield
-      rescue Aws::Route53::Errors::Throttled, Aws::Route53::Errors::PriorRequestNotComplete => ex
+      rescue Aws::Route53::Errors::Throttling, Aws::Route53::Errors::PriorRequestNotComplete => ex
         if tries_left > 0
           @logger.info(progname) { "Received #{ex.class}; waiting for #{next_timeout}s and retrying" }
           Kernel.sleep next_timeout

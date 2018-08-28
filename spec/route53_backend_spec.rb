@@ -130,14 +130,14 @@ describe DDNSSD::Backend::Route53 do
       end
     end
 
-    context "on receiving Throttled error" do
+    context "on receiving Throttling error" do
       let(:route53_stubs) do
         req_count = 0
         {
           list_resource_record_sets: ->(context) do
             req_count += 1
             if [1, 2, 3, 5].include?(req_count)
-              'Throttled'
+              'Throttling'
             elsif context.params[:start_record_name].nil? && context.params[:start_record_type].nil?
               route53_response_fixture("page_of_records_1_of_2")
             elsif context.params[:start_record_name] == "faff" && context.params[:start_record_type] == "XYZZY"
@@ -317,14 +317,14 @@ describe DDNSSD::Backend::Route53 do
         backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :A, "192.0.2.42"))
       end
 
-      context "on Throttled error" do
+      context "on Throttling error" do
         let(:route53_stubs) do
           req_count = 0
           {
             change_resource_record_sets: ->(context) do
               req_count += 1
               if req_count < 4
-                'Throttled'
+                'Throttling'
               else
                 {
                   change_info: {
@@ -1278,14 +1278,14 @@ describe DDNSSD::Backend::Route53 do
         end
       end
 
-      context "on Throttled error" do
+      context "on Throttling error" do
         let(:route53_stubs) do
           req_count = 0
           {
             change_resource_record_sets: ->(context) do
               req_count += 1
               if req_count < 4
-                'Throttled'
+                'Throttling'
               else
                 {
                   change_info: {
