@@ -6,7 +6,13 @@ require 'logger'
 Thread.abort_on_exception
 
 logger = Logger.new($stderr)
-logger.level = Logger.const_get(ENV['DDNSSD_LOG_LEVEL'] || "INFO")
+logger.level = Logger.const_get(ENV['DDNSSD_LOG_LEVEL'].upcase || "INFO")
+
+if ENV['DDNSSD_DEBUG_MODULES'] && ENV['DDNSSD_DEBUG_MODULES'] != ""
+  require 'filtered_debug_logger'
+  Logger.prepend(FilteredDebugLogger)
+  logger.permitted_prognames = ENV['DDNSSD_DEBUG_MODULES'].split(/,\s*/)
+end
 
 if ENV['DDNSSD_DISABLE_LOG_TIMESTAMPS']
   logger.formatter = ->(s, t, p, m) { "#{s[0]} #{p} #{m}\n" }

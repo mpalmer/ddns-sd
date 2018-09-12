@@ -118,6 +118,17 @@ sensible default which works OK in at least some circumstances.
     `USR1` and `USR2` signals, which can be used to change the log level
     at runtime.
 
+* **`DDNSSD_DEBUG_MODULES`**
+
+    *Default*: `""`
+
+    This setting has no effect unless `DDNSSD_LOG_LEVEL=DEBUG`.
+
+    If set to a non-empty string, this variable is interpreted as a
+    comma-separated list of module names (as specified by the argument to
+    `@logger.debug`) for which debug messages will be logged.  By default,
+    all debug messages will be logged.
+
 * **`DDNSSD_IPV6_ONLY`**
 
     *Default*: `"false"`
