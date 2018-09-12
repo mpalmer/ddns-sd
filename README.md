@@ -549,6 +549,15 @@ The DNS Zone name is equal to the `DNSSD_BASE_DOMAIN`.
     An azure access token (in json format) - this is the output of `az account get-access-token`.
     
 
+## Logging-only backend
+
+**`DDNSSD_BACKEND=log`**
+
+This is a debugging aid only, and is unlikely to be of much use to anyone in
+the real world.  It simply logs all DNS change events as they happen in a
+human-readable format.
+
+
 # Signals
 
 The `ddns-sd` command-line program (and hence the Docker container) accept
