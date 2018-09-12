@@ -52,7 +52,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
         case record_type
         when :A then rrset.arecords.map { |r| { type: "A", value: r.ipv4address } }
         when :AAAA then rrset.aaaa_records.map { |r| { type: "AAAA", value: r.ipv6address } }
-        when :MX then rrset.mx_records.map { |r| { type: "MX", value: "#{ r.preference } #{ r.exchange }" }}
+        when :MX then rrset.mx_records.map { |r| { type: "MX", value: "#{ r.preference } #{ r.exchange }" } }
         when :NS then rrset.ns_records.map { |r| { type: "NS", value: r.nsdname } }
         when :PTR then rrset.ptr_records.map { |r| { type: "PTR", value: r.ptrdname } }
         when :SRV then rrset.srv_records.map { |r| { type: "SRV", value: "#{ r.priority } #{ r.weight } #{ r.port } #{ r.target }" } }
@@ -116,7 +116,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar.target = v[3]
                         ar }
       when :TXT then rrset.txt_records = records.map { |r|
-                       # Hack to get azure to update with blank txt records
+                        # Hack to get azure to update with blank txt records
                         ar = TxtRecord.new
                         ar.value =
                           if r.data.strings.reject { |er| er.empty? }.empty?

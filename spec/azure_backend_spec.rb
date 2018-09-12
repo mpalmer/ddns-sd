@@ -1,3 +1,6 @@
+# This file is extremely rubocop-unfriendly
+# rubocop:disable all
+
 require_relative './spec_helper'
 
 require 'ddnssd/backend/azure'
