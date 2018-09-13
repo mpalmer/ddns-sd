@@ -11,9 +11,16 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
   class InvalidChangeRequest < DDNSSD::Error; end
 
   module Retryable
+    RETRY_LIMIT = 30
+
+    # Retry a block of code a fixed number of times, waiting a random but
+    # slowly increasing amount of time between each attempt, until the block
+    # of code *doesn't* raise one of the AWS-specific "try again later"
+    # exceptions.
     def retryable
-      next_timeout = 0.1
-      tries_left = 10
+      # Somewhere between 0.5 and 1 seconds for the initial retry should be enough
+      next_timeout = 0.5 + rand / 2
+      tries_left = RETRY_LIMIT
 
       begin
         tries_left -= 1
@@ -22,10 +29,11 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
         if tries_left > 0
           @logger.info(progname) { "Received #{ex.class}; waiting for #{next_timeout}s and retrying" }
           Kernel.sleep next_timeout
-          next_timeout *= 2
+          next_timeout *= 1.1
+          next_timeout += rand
           retry
         else
-          raise RetryError, "Attempted request 10 times, got a retryable error every time. This is not normal. Giving up."
+          raise RetryError, "Attempted request #{RETRY_LIMIT} times, got a retryable error every time. This is not normal. Giving up."
         end
       end
     end
@@ -168,7 +176,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
   def add_record(rr)
     @logger.debug(progname) { "-> add_record(#{rr.inspect})" }
 
-    tries_left = 10
+    tries_left = 100
 
     begin
       tries_left -= 1
@@ -202,7 +210,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
   def remove_record(rr)
     @logger.debug(progname) { "-> remove_record(#{rr.inspect})" }
 
-    tries_left = 10
+    tries_left = 100
 
     begin
       tries_left -= 1
@@ -226,7 +234,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
   def remove_srv_record(srv_rr)
     @logger.debug(progname) { "-> remove_srv_record(#{srv_rr.inspect})" }
 
-    tries_left = 10
+    tries_left = 100
 
     begin
       tries_left -= 1

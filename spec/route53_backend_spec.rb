@@ -154,22 +154,22 @@ describe DDNSSD::Backend::Route53 do
         expect(r53).to receive(:list_resource_record_sets)
           .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: nil, start_record_type: nil)
           .and_call_original
-        expect(Kernel).to receive(:sleep).with(0.1)
+        expect(Kernel).to receive(:sleep).with(a_value_between(0.5, 1))
         expect(r53).to receive(:list_resource_record_sets)
           .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: nil, start_record_type: nil)
           .and_call_original
-        expect(Kernel).to receive(:sleep).with(0.2)
+        expect(Kernel).to receive(:sleep).with(a_value_between(0.55, 2.1))
         expect(r53).to receive(:list_resource_record_sets)
           .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: nil, start_record_type: nil)
           .and_call_original
-        expect(Kernel).to receive(:sleep).with(0.4)
+        expect(Kernel).to receive(:sleep).with(a_value_between(0.605, 3.31))
         expect(r53).to receive(:list_resource_record_sets)
           .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: nil, start_record_type: nil)
           .and_call_original
         expect(r53).to receive(:list_resource_record_sets)
           .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "faff", start_record_type: "XYZZY")
           .and_call_original
-        expect(Kernel).to receive(:sleep).with(0.1)
+        expect(Kernel).to receive(:sleep).with(a_value_between(0.5, 1))
         expect(r53).to receive(:list_resource_record_sets)
           .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "faff", start_record_type: "XYZZY")
           .and_call_original
@@ -202,22 +202,22 @@ describe DDNSSD::Backend::Route53 do
         expect(r53).to receive(:list_resource_record_sets)
           .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: nil, start_record_type: nil)
           .and_call_original
-        expect(Kernel).to receive(:sleep).with(0.1)
+        expect(Kernel).to receive(:sleep).with(a_value_between(0.5, 1))
         expect(r53).to receive(:list_resource_record_sets)
           .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: nil, start_record_type: nil)
           .and_call_original
         expect(r53).to receive(:list_resource_record_sets)
           .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "faff", start_record_type: "XYZZY")
           .and_call_original
-        expect(Kernel).to receive(:sleep).with(0.1)
+        expect(Kernel).to receive(:sleep).with(a_value_between(0.5, 1))
         expect(r53).to receive(:list_resource_record_sets)
           .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "faff", start_record_type: "XYZZY")
           .and_call_original
-        expect(Kernel).to receive(:sleep).with(0.2)
+        expect(Kernel).to receive(:sleep).with(a_value_between(0.55, 2.1))
         expect(r53).to receive(:list_resource_record_sets)
           .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "faff", start_record_type: "XYZZY")
           .and_call_original
-        expect(Kernel).to receive(:sleep).with(0.4)
+        expect(Kernel).to receive(:sleep).with(a_value_between(0.605, 3.31))
         expect(r53).to receive(:list_resource_record_sets)
           .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "faff", start_record_type: "XYZZY")
           .and_call_original
@@ -233,7 +233,7 @@ describe DDNSSD::Backend::Route53 do
         end
 
         it "retries for a while, then gives up and logs an error" do
-          9.times do
+          29.times do
             expect(r53).to receive(:list_resource_record_sets)
               .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: nil, start_record_type: nil)
               .and_call_original.ordered
@@ -340,11 +340,11 @@ describe DDNSSD::Backend::Route53 do
 
         it "backs off and retries" do
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
-          expect(Kernel).to receive(:sleep).with(0.1).ordered
+          expect(Kernel).to receive(:sleep).with(a_value_between(0.5, 1)).ordered
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
-          expect(Kernel).to receive(:sleep).with(0.2).ordered
+          expect(Kernel).to receive(:sleep).with(a_value_between(0.55, 2.1)).ordered
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
-          expect(Kernel).to receive(:sleep).with(0.4).ordered
+          expect(Kernel).to receive(:sleep).with(a_value_between(0.605, 3.31)).ordered
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
           expect(Kernel).to_not receive(:sleep)
 
@@ -375,11 +375,11 @@ describe DDNSSD::Backend::Route53 do
 
         it "backs off and retries" do
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
-          expect(Kernel).to receive(:sleep).with(0.1).ordered
+          expect(Kernel).to receive(:sleep).with(a_value_between(0.5, 1)).ordered
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
-          expect(Kernel).to receive(:sleep).with(0.2).ordered
+          expect(Kernel).to receive(:sleep).with(a_value_between(0.55, 2.1)).ordered
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
-          expect(Kernel).to receive(:sleep).with(0.4).ordered
+          expect(Kernel).to receive(:sleep).with(a_value_between(0.605, 3.31)).ordered
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
           expect(Kernel).to_not receive(:sleep)
 
@@ -758,7 +758,7 @@ describe DDNSSD::Backend::Route53 do
           it "retries for a while then gives up" do
             expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
 
-            9.times do
+            99.times do
               expect(r53).to receive(:list_resource_record_sets).and_call_original.ordered
               expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
             end
@@ -1263,7 +1263,7 @@ describe DDNSSD::Backend::Route53 do
           it "retries for a while then gives up" do
             expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
 
-            9.times do
+            99.times do
               expect(r53).to receive(:list_resource_record_sets).and_call_original.ordered
               expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
             end
@@ -1309,11 +1309,11 @@ describe DDNSSD::Backend::Route53 do
 
         it "backs off and retries" do
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
-          expect(Kernel).to receive(:sleep).with(0.1).ordered
+          expect(Kernel).to receive(:sleep).with(a_value_between(0.5, 1)).ordered
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
-          expect(Kernel).to receive(:sleep).with(0.2).ordered
+          expect(Kernel).to receive(:sleep).with(a_value_between(0.55, 2.1)).ordered
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
-          expect(Kernel).to receive(:sleep).with(0.4).ordered
+          expect(Kernel).to receive(:sleep).with(a_value_between(0.605, 3.31)).ordered
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
           expect(Kernel).to_not receive(:sleep)
 
@@ -1352,11 +1352,11 @@ describe DDNSSD::Backend::Route53 do
 
         it "backs off and retries" do
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
-          expect(Kernel).to receive(:sleep).with(0.1).ordered
+          expect(Kernel).to receive(:sleep).with(a_value_between(0.5, 1)).ordered
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
-          expect(Kernel).to receive(:sleep).with(0.2).ordered
+          expect(Kernel).to receive(:sleep).with(a_value_between(0.55, 2.1)).ordered
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
-          expect(Kernel).to receive(:sleep).with(0.4).ordered
+          expect(Kernel).to receive(:sleep).with(a_value_between(0.605, 3.31)).ordered
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
           expect(Kernel).to_not receive(:sleep)
 
@@ -1786,7 +1786,7 @@ describe DDNSSD::Backend::Route53 do
             it "retries for a while then gives up" do
               expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
 
-              9.times do
+              99.times do
                 # Refreshes the SRV, TXT, *and* PTR
                 3.times { expect(r53).to receive(:list_resource_record_sets).and_call_original.ordered }
                 expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
