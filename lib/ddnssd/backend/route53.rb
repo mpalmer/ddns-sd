@@ -26,7 +26,6 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
         tries_left -= 1
         yield
       rescue Aws::Route53::Errors::Throttling, Aws::Route53::Errors::PriorRequestNotComplete, Seahorse::Client::NetworkingError => ex
-        @throttling_count.increment({})
         if tries_left > 0
           @logger.info(progname) { "Received #{ex.class}; waiting for #{next_timeout}s and retrying" }
           Kernel.sleep next_timeout
@@ -45,8 +44,8 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
   class RecordCache
     include Retryable
 
-    def initialize(zone_id, route53, route53_stats, throttling_count, logger)
-      @zone_id, @route53, @route53_stats, @throttling_count, @logger = zone_id, route53, route53_stats, throttling_count, logger
+    def initialize(zone_id, route53, route53_stats, logger)
+      @zone_id, @route53, @route53_stats, @logger = zone_id, route53, route53_stats, logger
 
       blank_cache
     end
@@ -149,9 +148,8 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
     # the region parameter.  Go AWS!
     @route53 = Aws::Route53::Client.new(region: "fml")
     @route53_stats = Frankenstein::Request.new(:ddnssd_route53, description: "route53", registry: @config.metrics_registry)
-    @throttling_count = @config.metrics_registry.counter(:ddnssd_route53_throttling_total, "The number of times we've been rate-limited by route53")
 
-    @record_cache = RecordCache.new(@zone_id, @route53, @route53_stats, @throttling_count, @logger)
+    @record_cache = RecordCache.new(@zone_id, @route53, @route53_stats, @logger)
   end
 
   def dns_records
