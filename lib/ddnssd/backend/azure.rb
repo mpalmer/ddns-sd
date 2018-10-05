@@ -52,14 +52,12 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
         case record_type
         when :A then rrset.arecords.map { |r| { type: "A", value: r.ipv4address } }
         when :AAAA then rrset.aaaa_records.map { |r| { type: "AAAA", value: r.ipv6address } }
-        when :MX then rrset.mx_records.map { |r| { type: "MX", value: "#{ r.preference } #{ r.exchange }" } }
         when :NS then rrset.ns_records.map { |r| { type: "NS", value: r.nsdname } }
         when :PTR then rrset.ptr_records.map { |r| { type: "PTR", value: r.ptrdname } }
         when :SRV then rrset.srv_records.map { |r| { type: "SRV", value: "#{ r.priority } #{ r.weight } #{ r.port } #{ r.target }" } }
         when :TXT then rrset.txt_records.map { |r| { type: "TXT", value: r.value } }
         when :CNAME then [{ type: "CNAME", value: rrset.cname_record.cname }]
         when :SOA then [{ type: "SOA", value: "#{ rrset.soa_record.host } #{ rrset.soa_record.email } #{ rrset.soa_record.serial_number } #{ rrset.soa_record.refresh_time } #{ rrset.soa_record.retry_time } #{ rrset.soa_record.expire_time } #{ rrset.soa_record.minimum_ttl }" }]
-        when :CAA then rrset.caa_records.map { |r| { type: "CAA", value: "#{ r.flags } #{ r.tag } #{ r.value }" } }
         else []
         end
 
@@ -93,16 +91,6 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                          ar = AaaaRecord.new
                          ar.ipv6address = r.value
                          ar  }
-      when :MX then rrset.mx_records = records.map { |r|
-                       v = r.value.split(" ")
-                       ar = MxRecord.new
-                       ar.preference = v[0]
-                       ar.exchange = v[1]
-                       ar }
-      when :NS then rrset.ns_records = records.map { |r|
-                       ar = NsRecord.new
-                       ar.nsdname = r.value
-                       ar }
       when :PTR then rrset.ptr_records = records.map { |r|
                         ar = PtrRecord.new
                         ar.ptrdname = r.value
@@ -129,24 +117,6 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                           ar = CnameRecord.new
                           ar.cname = r.value
                           ar }.first
-      when :SOA then rrset.soa_record = records.map { |r|
-                        v = r.value.split(" ")
-                        ar = SoaRecord.new
-                        ar.host = v[0]
-                        ar.email = v[1]
-                        ar.serial_number = v[2]
-                        ar.refresh_time = v[3]
-                        ar.retry_time = v[4]
-                        ar.expire_time = v[5]
-                        ar.minimum_ttl = v[6]
-                        ar }.first
-      when :CAA then rrset.caa_records = records.map { |r|
-                        v = r.value.split(" ")
-                        ar = CaaRecord.new
-                        ar.flags = v[0]
-                        ar.tag = v[1]
-                        ar.value = v[2]
-                        ar }
       end
       @logger.debug(progname) { "-> dnssd_to_az_records(#{rrset.inspect})" }
       rrset

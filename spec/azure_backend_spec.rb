@@ -115,6 +115,14 @@ describe DDNSSD::Backend::Azure do
       it "does not return NS records" do
         expect(backend.dns_records.any? { |rr| rr.type == :NS }).to be(false)
       end
+
+      it "converts unsupported record types to an empty record set" do
+        rrset = Azure::Dns::Mgmt::V2018_03_01_preview::Models::RecordSet.new
+        rrset.type = "test/other"
+        rrset.name = "test"
+        expect(backend.az_to_dnssd_records(rrset)).to eq([])
+
+      end
     end
 
     context "on other errors" do
