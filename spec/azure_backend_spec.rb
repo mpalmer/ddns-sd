@@ -1,6 +1,3 @@
-# This file is extremely rubocop-unfriendly
-# rubocop:disable all
-
 require_relative './spec_helper'
 
 require 'ddnssd/backend/azure'
@@ -30,13 +27,13 @@ describe DDNSSD::Backend::Azure do
       "DDNSSD_HOSTNAME"        => "speccy",
       "DDNSSD_BACKEND"         => "azure",
       "DDNSSD_BASE_DOMAIN"     => zone,
-      "DDNSSD_AZURE_RESOURCE_GROUP_NAME"     => rg,
-      "DDNSSD_AZURE_ACCESS_TOKEN"     => { accessToken: "flibber",
-                                           expiresOn: "2018-08-02 11:29:51.706962",
-                                           subscription: "123123123-1234-1234-1234-1234123123123",
-                                           tenant: "123123123-1234-1234-1234-1234123123123",
-                                           tokenType: "Bearer"
-                                         }.to_json,
+      "DDNSSD_AZURE_RESOURCE_GROUP_NAME" => rg,
+      "DDNSSD_AZURE_ACCESS_TOKEN" => { accessToken: "flibber",
+                                       expiresOn: "2018-08-02 11:29:51.706962",
+                                       subscription: "123123123-1234-1234-1234-1234123123123",
+                                       tenant: "123123123-1234-1234-1234-1234123123123",
+                                       tokenType: "Bearer"
+                                     }.to_json,
     }
   end
   let(:env) { base_env }
@@ -141,9 +138,9 @@ describe DDNSSD::Backend::Azure do
   describe "#publish_record" do
 
     before(:each) do
-      allow(az_client.record_sets).to receive(:create_or_update).and_return(OpenStruct.new({etag: "1"}))
-      allow(az_client.record_sets).to receive(:update).and_return(OpenStruct.new({etag: "1"}))
-      allow(az_client.record_sets).to receive(:create).and_return(OpenStruct.new({etag: "1"}))
+      allow(az_client.record_sets).to receive(:create_or_update).and_return(OpenStruct.new(etag: "1"))
+      allow(az_client.record_sets).to receive(:update).and_return(OpenStruct.new(etag: "1"))
+      allow(az_client.record_sets).to receive(:create).and_return(OpenStruct.new(etag: "1"))
     end
 
     context "with an NS record" do
@@ -160,7 +157,7 @@ describe DDNSSD::Backend::Azure do
                                            "flingle",
                                            "A",
                                            match_azure_record(
-                                             {"properties"=>{"TTL"=>42, "ARecords"=>[{"ipv4Address"=>"192.0.2.42"}]}}))
+                                             "properties" => { "TTL" => 42, "ARecords" => [{ "ipv4Address" => "192.0.2.42" }] }))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :A, "192.0.2.42"))
@@ -175,7 +172,7 @@ describe DDNSSD::Backend::Azure do
                                            "flingle",
                                            "AAAA",
                                            match_azure_record(
-                                             {"properties"=>{"TTL"=>42, "AAAARecords"=>[{"ipv6Address"=>"2001:DB8::42"}]}}))
+                                             "properties" => { "TTL" => 42, "AAAARecords" => [{ "ipv6Address" => "2001:DB8::42" }] }))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
@@ -189,7 +186,7 @@ describe DDNSSD::Backend::Azure do
                                            zone,
                                            "db",
                                            "CNAME",
-                                           match_azure_record({"properties"=>{"TTL"=>42, "CNAMERecord"=>{"cname"=>"pgsql.host27.example.com"}}}))
+                                           match_azure_record("properties" => { "TTL" => 42, "CNAMERecord" => { "cname" => "pgsql.host27.example.com" } }))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("db.example.com", 42, :CNAME, "pgsql.host27.example.com"))
@@ -203,14 +200,14 @@ describe DDNSSD::Backend::Azure do
                                            zone,
                                            "faff._http._tcp",
                                            "TXT",
-                                           match_azure_record({"properties"=>{"TTL"=>42, "TXTRecords"=>[{"value"=>["something \"funny\"", "this too"]}]}}))
+                                           match_azure_record("properties" => { "TTL" => 42, "TXTRecords" => [{ "value" => ["something \"funny\"", "this too"] }] }))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, 'something "funny"', "this too"))
       end
 
       it "works around an azure limitation of blank records by upserting a TXT record with a space" do
-        expect(az_client.record_sets).to receive(:create_or_update).with(rg, zone, "faff._http._tcp", "TXT", match_azure_record({"properties"=>{"TTL"=>42, "TXTRecords"=>[{"value"=>[" "]}]}}))
+        expect(az_client.record_sets).to receive(:create_or_update).with(rg, zone, "faff._http._tcp", "TXT", match_azure_record("properties" => { "TTL" => 42, "TXTRecords" => [{ "value" => [" "] }] }))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
         backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, ""))
@@ -226,7 +223,7 @@ describe DDNSSD::Backend::Azure do
                                              "faff._http._tcp",
                                              "SRV",
                                              match_azure_record(
-                                               {"properties"=>{"TTL"=>42, "SRVRecords"=>[{"priority" => "0", "weight" => "0", "port" => "80", "target" => "faff.host22.example.com"}]}}),
+                                               "properties" => { "TTL" => 42, "SRVRecords" => [{ "priority" => "0", "weight" => "0", "port" => "80", "target" => "faff.host22.example.com" }] }),
                                              if_none_match: "*")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
@@ -280,7 +277,7 @@ describe DDNSSD::Backend::Azure do
             expect(az_client.record_sets).to receive(:create_or_update).and_raise(MsRestAzure::AzureOperationError, "test").ordered
             expect(az_client.record_sets).to receive(:get).with(rg, zone, "faff._http._tcp", "SRV").and_return(refreshed_response).ordered
 
-            expect(az_client.record_sets).to receive(:update).with(rg, zone, "faff._http._tcp", "SRV", anything, if_match: "faff_etag").and_return(OpenStruct.new({etag: "other"})).ordered
+            expect(az_client.record_sets).to receive(:update).with(rg, zone, "faff._http._tcp", "SRV", anything, if_match: "faff_etag").and_return(OpenStruct.new(etag: "other")).ordered
 
             backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
           end
@@ -291,7 +288,7 @@ describe DDNSSD::Backend::Azure do
             expect(az_client.record_sets).to receive(:create_or_update).and_raise(MsRestAzure::AzureOperationError, "test").ordered
             expect(az_client.record_sets).to receive(:get).with(rg, zone, "faff._http._tcp", "SRV").and_raise(MsRestAzure::AzureOperationError, "404 doesn't exist").ordered
 
-            expect(az_client.record_sets).to receive(:create_or_update).with(rg, zone, "faff._http._tcp", "SRV", anything, if_none_match: "*").and_return(OpenStruct.new({etag: "other"})).ordered
+            expect(az_client.record_sets).to receive(:create_or_update).with(rg, zone, "faff._http._tcp", "SRV", anything, if_none_match: "*").and_return(OpenStruct.new(etag: "other")).ordered
 
             backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
           end
@@ -367,7 +364,7 @@ describe DDNSSD::Backend::Azure do
             expect(az_client.record_sets).to receive(:create_or_update).and_raise(MsRestAzure::AzureOperationError, "test").ordered
             expect(az_client.record_sets).to receive(:get).with(rg, zone, "_http._tcp", "PTR").and_return(refreshed_response).ordered
 
-            expect(az_client.record_sets).to receive(:update).with(rg, zone, "_http._tcp", "PTR", anything, if_match: "http_ptr_etag").and_return(OpenStruct.new({etag: "other"})).ordered
+            expect(az_client.record_sets).to receive(:update).with(rg, zone, "_http._tcp", "PTR", anything, if_match: "http_ptr_etag").and_return(OpenStruct.new(etag: "other")).ordered
 
             backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
           end
@@ -378,7 +375,7 @@ describe DDNSSD::Backend::Azure do
             expect(az_client.record_sets).to receive(:create_or_update).and_raise(MsRestAzure::AzureOperationError, "test").ordered
             expect(az_client.record_sets).to receive(:get).with(rg, zone, "_http._tcp", "PTR").and_raise(MsRestAzure::AzureOperationError, "404 doesn't exist").ordered
 
-            expect(az_client.record_sets).to receive(:create_or_update).with(rg, zone, "_http._tcp", "PTR", anything, if_none_match: "*").and_return(OpenStruct.new({etag: "other"})).ordered
+            expect(az_client.record_sets).to receive(:create_or_update).with(rg, zone, "_http._tcp", "PTR", anything, if_none_match: "*").and_return(OpenStruct.new(etag: "other")).ordered
 
             backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
           end
@@ -403,13 +400,12 @@ describe DDNSSD::Backend::Azure do
     end
   end
 
-
   describe "#suppress_record" do
     before(:each) do
 
-      allow(az_client.record_sets).to receive(:create).and_return(OpenStruct.new({etag: "1"}))
-      allow(az_client.record_sets).to receive(:update).and_return(OpenStruct.new({etag: "1"}))
-      allow(az_client.record_sets).to receive(:create_or_update).and_return(OpenStruct.new({etag: "1"}))
+      allow(az_client.record_sets).to receive(:create).and_return(OpenStruct.new(etag: "1"))
+      allow(az_client.record_sets).to receive(:update).and_return(OpenStruct.new(etag: "1"))
+      allow(az_client.record_sets).to receive(:create_or_update).and_return(OpenStruct.new(etag: "1"))
       allow(az_client.record_sets).to receive(:delete)
     end
     context "with an A record" do
@@ -525,7 +521,6 @@ describe DDNSSD::Backend::Azure do
         end
       end
     end
-
 
     context "with a CNAME record" do
       context "with no other records in the set" do
