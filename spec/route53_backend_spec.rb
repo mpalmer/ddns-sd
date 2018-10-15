@@ -232,21 +232,23 @@ describe DDNSSD::Backend::Route53 do
           }
         end
 
-        it "retries for a while, then gives up and logs an error" do
-          29.times do
+        it "retries up to the default limit, then gives up and logs an error" do
+          with_overridden_constant(DDNSSD::Backend::Route53::Retryable, :DEFAULT_RETRY_LIMIT, 17) do
+            16.times do
+              expect(r53).to receive(:list_resource_record_sets)
+                .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: nil, start_record_type: nil)
+                .and_call_original.ordered
+              expect(Kernel).to receive(:sleep).ordered
+            end
             expect(r53).to receive(:list_resource_record_sets)
               .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: nil, start_record_type: nil)
               .and_call_original.ordered
-            expect(Kernel).to receive(:sleep).ordered
+
+            expect(logger).to receive(:error)
+            expect(r53).to_not receive(:list_resource_record_sets)
+
+            backend.dns_records
           end
-          expect(r53).to receive(:list_resource_record_sets)
-            .with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: nil, start_record_type: nil)
-            .and_call_original.ordered
-
-          expect(logger).to receive(:error)
-          expect(r53).to_not receive(:list_resource_record_sets)
-
-          backend.dns_records
         end
       end
     end
@@ -756,19 +758,21 @@ describe DDNSSD::Backend::Route53 do
           end
 
           it "retries for a while then gives up" do
-            expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
-
-            99.times do
-              expect(r53).to receive(:list_resource_record_sets).and_call_original.ordered
+            with_overridden_constant(DDNSSD::Backend::Route53::Retryable, :DEFAULT_RETRY_LIMIT, 42) do
               expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
+
+              41.times do
+                expect(r53).to receive(:list_resource_record_sets).and_call_original.ordered
+                expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
+              end
+
+              expect(logger).to receive(:error).ordered
+
+              expect(r53).to_not receive(:list_resource_record_sets)
+              expect(r53).to_not receive(:change_resource_record_sets)
+
+              backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
             end
-
-            expect(logger).to receive(:error).ordered
-
-            expect(r53).to_not receive(:list_resource_record_sets)
-            expect(r53).to_not receive(:change_resource_record_sets)
-
-            backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
           end
         end
       end
@@ -1261,19 +1265,21 @@ describe DDNSSD::Backend::Route53 do
           end
 
           it "retries for a while then gives up" do
-            expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
-
-            99.times do
-              expect(r53).to receive(:list_resource_record_sets).and_call_original.ordered
+            with_overridden_constant(DDNSSD::Backend::Route53::Retryable, :DEFAULT_RETRY_LIMIT, 42) do
               expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
+
+              41.times do
+                expect(r53).to receive(:list_resource_record_sets).and_call_original.ordered
+                expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
+              end
+
+              expect(logger).to receive(:error).ordered
+
+              expect(r53).to_not receive(:list_resource_record_sets)
+              expect(r53).to_not receive(:change_resource_record_sets)
+
+              backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
             end
-
-            expect(logger).to receive(:error).ordered
-
-            expect(r53).to_not receive(:list_resource_record_sets)
-            expect(r53).to_not receive(:change_resource_record_sets)
-
-            backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
           end
         end
       end
@@ -1784,20 +1790,22 @@ describe DDNSSD::Backend::Route53 do
             end
 
             it "retries for a while then gives up" do
-              expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
-
-              99.times do
-                # Refreshes the SRV, TXT, *and* PTR
-                3.times { expect(r53).to receive(:list_resource_record_sets).and_call_original.ordered }
+              with_overridden_constant(DDNSSD::Backend::Route53::Retryable, :DEFAULT_RETRY_LIMIT, 42) do
                 expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
+
+                41.times do
+                  # Refreshes the SRV, TXT, *and* PTR
+                  3.times { expect(r53).to receive(:list_resource_record_sets).and_call_original.ordered }
+                  expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
+                end
+
+                expect(logger).to receive(:error).ordered
+
+                expect(r53).to_not receive(:list_resource_record_sets)
+                expect(r53).to_not receive(:change_resource_record_sets)
+
+                backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host1.example.com"))
               end
-
-              expect(logger).to receive(:error).ordered
-
-              expect(r53).to_not receive(:list_resource_record_sets)
-              expect(r53).to_not receive(:change_resource_record_sets)
-
-              backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host1.example.com"))
             end
           end
         end

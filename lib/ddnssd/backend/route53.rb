@@ -11,16 +11,17 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
   class InvalidChangeRequest < DDNSSD::Error; end
 
   module Retryable
-    RETRY_LIMIT = 30
+    # The default "limit" on retries is effectively infinite retries.
+    DEFAULT_RETRY_LIMIT = 1_000_000_000_000_000_000
 
     # Retry a block of code a fixed number of times, waiting a random but
     # slowly increasing amount of time between each attempt, until the block
     # of code *doesn't* raise one of the AWS-specific "try again later"
     # exceptions.
-    def retryable
+    def retryable(limit: DEFAULT_RETRY_LIMIT)
       # Somewhere between 0.5 and 1 seconds for the initial retry should be enough
       next_timeout = 0.5 + rand / 2
-      tries_left = RETRY_LIMIT
+      tries_left = limit
 
       begin
         tries_left -= 1
@@ -33,7 +34,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
           next_timeout += rand
           retry
         else
-          raise RetryError, "Attempted request #{RETRY_LIMIT} times, got a retryable error every time. This is not normal. Giving up."
+          raise RetryError, "Attempted request #{limit} times, got a retryable error every time. Giving up."
         end
       end
     end
@@ -176,7 +177,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
   def add_record(rr)
     @logger.debug(progname) { "-> add_record(#{rr.inspect})" }
 
-    tries_left = 100
+    tries_left = Retryable::DEFAULT_RETRY_LIMIT
 
     begin
       tries_left -= 1
@@ -210,7 +211,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
   def remove_record(rr)
     @logger.debug(progname) { "-> remove_record(#{rr.inspect})" }
 
-    tries_left = 100
+    tries_left = Retryable::DEFAULT_RETRY_LIMIT
 
     begin
       tries_left -= 1
@@ -234,7 +235,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
   def remove_srv_record(srv_rr)
     @logger.debug(progname) { "-> remove_srv_record(#{srv_rr.inspect})" }
 
-    tries_left = 100
+    tries_left = Retryable::DEFAULT_RETRY_LIMIT
 
     begin
       tries_left -= 1
