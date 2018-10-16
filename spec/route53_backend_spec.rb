@@ -641,6 +641,7 @@ describe DDNSSD::Backend::Route53 do
                     },
                     hosted_zone_id: "Z3M3LMPEXAMPLE"
                    ).and_call_original.ordered
+            expect(backend).to receive(:sleep).with(a_value_between(0, 2)).ordered
             expect(r53).to receive(:list_resource_record_sets).with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "faff._http._tcp.example.com", start_record_type: "SRV", max_items: 1).and_call_original.ordered
             expect(r53).to receive(:change_resource_record_sets)
               .with(change_batch: {
@@ -724,6 +725,7 @@ describe DDNSSD::Backend::Route53 do
                     },
                     hosted_zone_id: "Z3M3LMPEXAMPLE"
                    ).and_call_original.ordered
+            expect(backend).to receive(:sleep).with(a_value_between(0, 2))
             expect(r53).to receive(:list_resource_record_sets).with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "faff._http._tcp.example.com", start_record_type: "SRV", max_items: 1).and_call_original.ordered
             expect(r53).to receive(:change_resource_record_sets)
               .with(change_batch: {
@@ -762,6 +764,7 @@ describe DDNSSD::Backend::Route53 do
               expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
 
               41.times do
+                expect(backend).to receive(:sleep).with(a_value_between(0, 2))
                 expect(r53).to receive(:list_resource_record_sets).and_call_original.ordered
                 expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
               end
@@ -942,6 +945,7 @@ describe DDNSSD::Backend::Route53 do
                     },
                     hosted_zone_id: "Z3M3LMPEXAMPLE"
                    ).and_call_original.ordered
+            expect(backend).to receive(:sleep).with(a_value_between(0, 2))
             expect(r53).to receive(:list_resource_record_sets).with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "_http._tcp.example.com", start_record_type: "PTR", max_items: 1).and_call_original.ordered
             expect(r53).to receive(:change_resource_record_sets)
               .with(change_batch: {
@@ -1025,6 +1029,7 @@ describe DDNSSD::Backend::Route53 do
                     },
                     hosted_zone_id: "Z3M3LMPEXAMPLE"
                    ).and_call_original.ordered
+            expect(backend).to receive(:sleep).with(a_value_between(0, 2))
             expect(r53).to receive(:list_resource_record_sets).with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "_http._tcp.example.com", start_record_type: "PTR", max_items: 1).and_call_original.ordered
             expect(r53).to receive(:change_resource_record_sets)
               .with(change_batch: {
@@ -1231,6 +1236,7 @@ describe DDNSSD::Backend::Route53 do
                   },
                   hosted_zone_id: "Z3M3LMPEXAMPLE"
                  ).and_call_original.ordered
+          expect(backend).to receive(:sleep).with(a_value_between(0, 2))
           expect(r53).to receive(:list_resource_record_sets).with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "abcd1234.flingle.example.com", start_record_type: "A", max_items: 1).and_call_original.ordered
           expect(r53).to receive(:change_resource_record_sets)
             .with(change_batch: {
@@ -1269,6 +1275,7 @@ describe DDNSSD::Backend::Route53 do
               expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
 
               41.times do
+                expect(backend).to receive(:sleep).with(a_value_between(0, 2))
                 expect(r53).to receive(:list_resource_record_sets).and_call_original.ordered
                 expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
               end
@@ -1742,6 +1749,7 @@ describe DDNSSD::Backend::Route53 do
                     },
                     hosted_zone_id: "Z3M3LMPEXAMPLE"
                    ).and_call_original.ordered
+            expect(backend).to receive(:sleep).with(a_value_between(0, 2))
             expect(r53).to receive(:list_resource_record_sets).with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "faff._http._tcp.example.com", start_record_type: "SRV", max_items: 1).and_call_original.ordered
             expect(r53).to receive(:list_resource_record_sets).with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "faff._http._tcp.example.com", start_record_type: "TXT", max_items: 1).and_call_original.ordered
             expect(r53).to receive(:list_resource_record_sets).with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "_http._tcp.example.com", start_record_type: "PTR", max_items: 1).and_call_original.ordered
@@ -1794,6 +1802,7 @@ describe DDNSSD::Backend::Route53 do
                 expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
 
                 41.times do
+                  expect(backend).to receive(:sleep).with(a_value_between(0, 2))
                   # Refreshes the SRV, TXT, *and* PTR
                   3.times { expect(r53).to receive(:list_resource_record_sets).and_call_original.ordered }
                   expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
@@ -2029,6 +2038,7 @@ describe DDNSSD::Backend::Route53 do
                         ]
                       }
                      ).and_call_original.ordered
+              expect(backend).to receive(:sleep).with(a_value_between(0, 2))
               expect(r53).to receive(:list_resource_record_sets).with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "faff._http._tcp.example.com", start_record_type: "SRV", max_items: 1).and_call_original.ordered
               expect(r53).to receive(:list_resource_record_sets).with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "faff._http._tcp.example.com", start_record_type: "TXT", max_items: 1).and_call_original.ordered
               expect(r53).to receive(:list_resource_record_sets).with(hosted_zone_id: "Z3M3LMPEXAMPLE", start_record_name: "_http._tcp.example.com", start_record_type: "PTR", max_items: 1).and_call_original.ordered

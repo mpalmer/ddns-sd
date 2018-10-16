@@ -198,6 +198,8 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
       if tries_left > 0
         @logger.debug(progname) { "Received InvalidChangeBatch; refreshing record set for #{rr.name} #{rr.type}" }
 
+        sleep(rand * 2)
+
         @record_cache.refresh(rr.name, rr.type)
 
         @logger.debug(progname) { "record set for #{rr.name} #{rr.type} is now #{@record_cache.get(rr.name, rr.type).inspect}" }
@@ -223,6 +225,8 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
     rescue Aws::Route53::Errors::InvalidChangeBatch => ex
       if tries_left > 0
         @logger.debug(progname) { "Received InvalidChangeBatch; refreshing record set for #{rr.name} #{rr.type}" }
+
+        sleep(rand * 2)
 
         @record_cache.refresh(rr.name, rr.type)
         retry
@@ -288,6 +292,8 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
     rescue Aws::Route53::Errors::InvalidChangeBatch => ex
       if tries_left > 0
         @logger.debug(progname) { "Received InvalidChangeBatch; refreshing record set for #{srv_rr.name} #{srv_rr.type}/TXT" }
+
+        sleep(rand * 2)
 
         @record_cache.refresh(srv_rr.name, srv_rr.type)
         @record_cache.refresh(srv_rr.name, :TXT)
