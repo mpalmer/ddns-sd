@@ -10,6 +10,7 @@ end
 
 RSpec.configure do |config|
   config.fail_fast = true
+  config.order     = :random
   #config.full_backtrace = true
 
   config.expect_with :rspec do |c|
