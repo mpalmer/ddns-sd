@@ -4,3 +4,4 @@
 /coverage
 /.bundle
 /tmp
+.ruby-version

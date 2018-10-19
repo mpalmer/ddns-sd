@@ -39,7 +39,8 @@ available as a Docker image:
 
     docker run -v /var/run/docker.sock:/var/run/docker.sock \
         -e DDNSSD_HOSTNAME=$(hostname -s) \
-        -e DDNSSD_ZONE=route53:prod.example.com \
+        -e DDNSSD_BASE_DOMAIN=prod.example.com \
+        -e DDNSSD_BACKEND=route53 \
         discourse/ddns-sd
 
 The `-v` option is required to allow the container to listen for Docker
@@ -55,7 +56,8 @@ You can also run `ddns-sd` without a container, for testing or whatever
 takes your fancy, as follows:
 
     DDNSSD_HOSTNAME=$(hostname -s) \
-    DDNSSD_ZONE=route53:prod.example.com \
+    DDNSSD_BASE_DOMAIN=prod.example.com \
+    DDNSSD_BACKEND=route53 \
     RUBYLIB=lib bin/ddns-sd
 
 You're expected to have a running Docker installation with a socket at
