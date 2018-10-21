@@ -226,8 +226,8 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     super
 
     @zone_name = config.base_domain
-    @resource_group_name = config.backend_config["RESOURCE_GROUP_NAME"]
-    @access_token = config.backend_config["ACCESS_TOKEN"]
+    @resource_group_name = backend_config["RESOURCE_GROUP_NAME"]
+    @access_token = backend_config["ACCESS_TOKEN"]
 
     if @resource_group_name.nil? || @resource_group_name.empty?
       raise DDNSSD::Config::InvalidEnvironmentError,

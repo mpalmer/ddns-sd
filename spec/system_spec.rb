@@ -2,6 +2,7 @@ require_relative './spec_helper'
 
 require 'ddnssd/system'
 require 'ddnssd/backend/test_queue'
+require 'ddnssd/backend/log'
 
 describe DDNSSD::System do
   uses_logger
@@ -25,6 +26,17 @@ describe DDNSSD::System do
 
       DDNSSD::System.new(env, logger: logger)
     end
+
+    context "with multiple backends" do
+      let(:env) { base_env.merge("DDNSSD_BACKEND" => "test_queue,log") }
+
+      it "instantiates both backends" do
+        expect(DDNSSD::Backend::TestQueue).to receive(:new).with(instance_of(DDNSSD::Config))
+        expect(DDNSSD::Backend::Log).to receive(:new).with(instance_of(DDNSSD::Config))
+
+        system
+      end
+    end
   end
 
   describe "#config" do
@@ -36,6 +48,7 @@ describe DDNSSD::System do
   let(:mock_queue) { instance_double(Queue) }
   let(:mock_watcher) { instance_double(DDNSSD::DockerWatcher) }
   let(:mock_backend) { instance_double(DDNSSD::Backend::TestQueue) }
+  let(:mock_log_backend) { instance_double(DDNSSD::Backend::Log) }
 
   before(:each) do
     allow(DDNSSD::DockerWatcher).to receive(:new).with(queue: mock_queue, config: instance_of(DDNSSD::Config)).and_return(mock_watcher)
@@ -43,9 +56,11 @@ describe DDNSSD::System do
     allow(mock_queue).to receive(:pop).and_return([:terminate])
     allow(mock_watcher).to receive(:run!)
     allow(DDNSSD::Backend::TestQueue).to receive(:new).with(instance_of(DDNSSD::Config)).and_return(mock_backend)
+    allow(DDNSSD::Backend::Log).to receive(:new).with(instance_of(DDNSSD::Config)).and_return(mock_log_backend)
     allow(mock_queue).to receive(:push)
     allow(mock_watcher).to receive(:shutdown)
     allow(mock_backend).to receive(:publish_record)
+    allow(mock_log_backend).to receive(:publish_record)
   end
 
   describe "#shutdown" do
@@ -94,10 +109,32 @@ describe DDNSSD::System do
         system.run
       end
 
+      context "with multiple backends" do
+        let(:env) { base_env.merge("DDNSSD_BACKEND" => "test_queue,log") }
+
+        it "publishes the host's IP address to all backends" do
+          expect(mock_backend).to receive(:publish_record).with(DDNSSD::DNSRecord.new("speccy.example.com", 60, :A, "192.0.2.42"))
+          expect(mock_log_backend).to receive(:publish_record).with(DDNSSD::DNSRecord.new("speccy.example.com", 60, :A, "192.0.2.42"))
+
+          system.run
+        end
+      end
+
       it "reconciles containers" do
-        expect(system).to receive(:reconcile_containers)
+        expect(system).to receive(:reconcile_containers).with(mock_backend)
 
         system.run
+      end
+
+      context "with multiple backends" do
+        let(:env) { base_env.merge("DDNSSD_BACKEND" => "test_queue,log") }
+
+        it "reconciles all backends" do
+          expect(system).to receive(:reconcile_containers).with(mock_backend)
+          expect(system).to receive(:reconcile_containers).with(mock_log_backend)
+
+          system.run
+        end
       end
 
       context "if enable_metrics is true" do
@@ -135,6 +172,18 @@ describe DDNSSD::System do
 
           system.run
         end
+
+        context "with multiple backends" do
+          let(:env) { base_env.merge("DDNSSD_BACKEND" => "test_queue,log") }
+
+          it "tells the container to publish itself everywhere" do
+            expect(mock_queue).to receive(:pop).and_return([:started, "asdfasdfpub80"])
+            expect(ddnssd_container).to receive(:publish_records).with(mock_backend)
+            expect(ddnssd_container).to receive(:publish_records).with(mock_log_backend)
+
+            system.run
+          end
+        end
       end
 
       describe ":stopped" do
@@ -162,6 +211,20 @@ describe DDNSSD::System do
 
             system.run
           end
+
+          context "with multiple backends" do
+            let(:env) { base_env.merge("DDNSSD_BACKEND" => "test_queue,log") }
+
+            it "tells the container to suppress itself everywhere" do
+              system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
+
+              expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 0])
+              expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
+              expect(ddnssd_container).to receive(:suppress_records).with(mock_log_backend)
+
+              system.run
+            end
+          end
         end
 
         context "with abnormal exit status" do
@@ -187,6 +250,21 @@ describe DDNSSD::System do
 
             system.run
           end
+
+          context "with multiple backends" do
+            let(:env) { base_env.merge("DDNSSD_BACKEND" => "test_queue,log") }
+
+            it "tells the container to suppress itself everywhere" do
+              expect(ddnssd_container).to receive(:stopped).and_return(true)
+              system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
+
+              expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 42])
+              expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
+              expect(ddnssd_container).to receive(:suppress_records).with(mock_log_backend)
+
+              system.run
+            end
+          end
         end
       end
 
@@ -199,6 +277,23 @@ describe DDNSSD::System do
           expect(mock_queue).to receive(:pop).and_return([:suppress_all])
 
           system.run
+        end
+
+        context "with multiple backends" do
+          let(:env) { base_env.merge("DDNSSD_BACKEND" => "test_queue,log") }
+
+          it "suppresses all records from both backends" do
+            system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
+
+            expect(mock_queue).to receive(:pop).and_return([:suppress_all])
+            expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
+            expect(mock_backend).to receive(:suppress_shared_records)
+
+            expect(ddnssd_container).to receive(:suppress_records).with(mock_log_backend)
+            expect(mock_log_backend).to receive(:suppress_shared_records)
+
+            system.run
+          end
         end
       end
     end
@@ -234,7 +329,7 @@ describe DDNSSD::System do
     end
 
     it "requests a current container list" do
-      system.send(:reconcile_containers)
+      system.send(:reconcile_containers, mock_backend)
 
       expect(Docker::Container).to have_received(:all).with({}, mock_conn)
     end
@@ -245,7 +340,7 @@ describe DDNSSD::System do
       expect(Docker::Container).to receive(:get).with("asdfasdfpub22", {}, mock_conn).and_raise(Docker::Error::NotFoundError)
       expect(Docker::Container).to receive(:get).with("asdfasdfexposed80", {}, mock_conn)
 
-      system.send(:reconcile_containers)
+      system.send(:reconcile_containers, mock_backend)
 
       expect(system.instance_variable_get(:@containers).keys.sort).to eq(["asdfasdfexposed80", "asdfasdfpub80"])
     end
@@ -259,7 +354,7 @@ describe DDNSSD::System do
           expect(mock_backend).to receive(:publish_record).with(eq(rr)).ordered
         end
 
-        system.send(:reconcile_containers)
+        system.send(:reconcile_containers, mock_backend)
       end
     end
 
@@ -274,7 +369,7 @@ describe DDNSSD::System do
           expect(mock_backend).to receive(:suppress_record).with(eq(rr))
         end
 
-        system.send(:reconcile_containers)
+        system.send(:reconcile_containers, mock_backend)
       end
     end
 
@@ -301,7 +396,7 @@ describe DDNSSD::System do
           .to receive(:publish_record)
           .with(eq(DDNSSD::DNSRecord.new("pub80._http._tcp.example.com", 60, :SRV, 0, 0, 1337, "speccy.example.com")))
 
-        system.send(:reconcile_containers)
+        system.send(:reconcile_containers, mock_backend)
       end
     end
 
@@ -322,7 +417,7 @@ describe DDNSSD::System do
           expect(mock_backend).to receive(:publish_record).with(eq(rr))
         end
 
-        system.send(:reconcile_containers)
+        system.send(:reconcile_containers, mock_backend)
       end
     end
   end

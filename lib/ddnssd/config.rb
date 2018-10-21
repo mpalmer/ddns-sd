@@ -17,8 +17,8 @@ module DDNSSD
                 :host_ip_address,
                 :docker_host,
                 :logger,
-                :backend_class,
-                :backend_config
+                :backend_classes,
+                :backend_configs
 
     attr_reader :metrics_registry
 
@@ -63,8 +63,8 @@ module DDNSSD
       @record_ttl      = pluck_integer(env, "DDNSSD_RECORD_TTL", valid_range: 0..(2**31 - 1), default: 60)
       @host_ip_address = pluck_ipv4_address(env, "DDNSSD_HOST_IP_ADDRESS", default: nil)
       @docker_host     = pluck_string(env, "DOCKER_HOST", default: "unix:///var/run/docker.sock")
-      @backend_class   = find_backend_class(env)
-      @backend_config  = pluck_backend_config(env)
+      @backend_classes = find_backend_classes(env)
+      @backend_configs = pluck_backend_configs(env)
 
       # Even if we're not actually *running* a metrics server, we still need
       # the registry in place, because conditionalising every metrics-related
@@ -165,12 +165,18 @@ module DDNSSD
       addr.to_s
     end
 
-    def find_backend_class(env)
-      name = env["DDNSSD_BACKEND"]
-      if name.nil? || name.empty?
+    def find_backend_classes(env)
+      backend_list = env["DDNSSD_BACKEND"]
+      if backend_list.nil? || backend_list.empty?
         raise InvalidEnvironmentError, "Required environment variable DDNSSD_BACKEND not specified."
       end
 
+      backend_list.split(/\s*,\s*/).map do |name|
+        resolve_backend_name(name)
+      end
+    end
+
+    def resolve_backend_name(name)
       begin
         require "ddnssd/backend/#{name}"
       rescue LoadError => ex
@@ -190,10 +196,14 @@ module DDNSSD
       #:nocov:
     end
 
-    def pluck_backend_config(env)
-      prefix = "DDNSSD_#{find_backend_class(env).backend_name.upcase}_"
+    def pluck_backend_configs(env)
+      {}.tap do |backend_configs|
+        find_backend_classes(env).map(&:backend_name).each do |backend_name|
+          prefix = "DDNSSD_#{backend_name.upcase}_"
 
-      Hash[env.select { |k, v| k =~ /\A#{prefix}/ }.map { |k, v| [k.sub(/\A#{prefix}/, ''), v] }]
+          backend_configs[backend_name] = Hash[env.select { |k, v| k.start_with? prefix }.map { |k, v| [k.sub(/\A#{prefix}/, ''), v] }]
+        end
+      end
     end
   end
 end

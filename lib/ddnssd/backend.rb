@@ -19,6 +19,10 @@ module DDNSSD
       @shared_records = {}
     end
 
+    def name
+      self.class.backend_name
+    end
+
     def dns_records
       #:nocov:
       raise NoMethodError, "#dns_records not implemented by backend #{self.class}"
@@ -97,6 +101,10 @@ module DDNSSD
 
     def progname
       self.class.to_s
+    end
+
+    def backend_config
+      @config.backend_configs[name]
     end
   end
 end

@@ -65,7 +65,21 @@ describe DDNSSD::Config do
 
     context "DDNSSD_BACKEND" do
       it "accepts our test backend" do
-        expect(config.backend_class).to be(DDNSSD::Backend::TestQueue)
+        expect(config.backend_classes).to eq([DDNSSD::Backend::TestQueue])
+      end
+
+      context "with multiple comma-separated backend names" do
+        let(:env) do
+          base_env.merge("DDNSSD_BACKEND" => "test_queue,log", "DDNSSD_LOG_FAFF" => "hooboy")
+        end
+
+        it "handles multiple backends" do
+          expect(config.backend_classes).to eq([DDNSSD::Backend::TestQueue, DDNSSD::Backend::Log])
+        end
+
+        it "has the extra backend's config" do
+          expect(config.backend_configs["log"]).to eq("FAFF" => "hooboy")
+        end
       end
 
       it "freaks out without it" do
@@ -87,7 +101,7 @@ describe DDNSSD::Config do
       end
 
       it "extracts additional env vars for the backend" do
-        expect(config.backend_config).to eq("FOO" => "bar", "BAZ" => "wombat")
+        expect(config.backend_configs).to eq("test_queue" => { "FOO" => "bar", "BAZ" => "wombat" })
       end
     end
 

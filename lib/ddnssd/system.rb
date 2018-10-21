@@ -24,7 +24,7 @@ module DDNSSD
     def initialize(env, logger:)
       @config     = DDNSSD::Config.new(env, logger: logger)
       @logger     = logger
-      @backend    = @config.backend_class.new(@config)
+      @backends   = @config.backend_classes.map { |klass| klass.new(@config) }
       @queue      = Queue.new
       @watcher    = DDNSSD::DockerWatcher.new(queue: @queue, config: @config)
       @containers = {}
@@ -41,10 +41,10 @@ module DDNSSD
       end
 
       if @config.host_dns_record
-        @backend.publish_record(@config.host_dns_record)
+        @backends.each { |backend| backend.publish_record(@config.host_dns_record) }
       end
 
-      reconcile_containers
+      @backends.each { |backend| reconcile_containers(backend) }
 
       loop do
         item = @queue.pop
@@ -53,13 +53,13 @@ module DDNSSD
         case (item.first rescue nil)
         when :started
           @containers[item.last] = DDNSSD::Container.new(Docker::Container.get(item.last, {}, docker_connection), @config)
-          @containers[item.last].publish_records(@backend)
+          @backends.each { |backend| @containers[item.last].publish_records(backend) }
         when :stopped
           @containers[item.last].stopped = true
         when :died
           _, id, exitcode = item
           if exitcode == 0 || @containers[id].stopped
-            @containers[id].suppress_records(@backend)
+            @backends.each { |backend| @containers[id].suppress_records(backend) }
           else
             @logger.warn(progname) { "Container #{id} did not stop cleanly (exitcode #{exitcode}); not suppressing records" }
           end
@@ -69,10 +69,10 @@ module DDNSSD
           @logger.info(progname) { "Withdrawing all DNS records..." }
           @containers.values.each do |c|
             @logger.debug(progname) { "Withdrawing records for container #{c.id}" }
-            c.suppress_records(@backend)
+            @backends.each { |backend| c.suppress_records(backend) }
           end
           @logger.debug(progname) { "Suppressing common records" }
-          @backend.suppress_shared_records
+          @backends.each(&:suppress_shared_records)
           @logger.info(progname) { "Withdrawal complete." }
         when :terminate
           @logger.info(progname) { "Terminating." }
@@ -98,14 +98,14 @@ module DDNSSD
       "DDNSSD::System"
     end
 
-    def reconcile_containers
-      @logger.info(progname) { "Reconciling DNS records with container services" }
+    def reconcile_containers(backend)
+      @logger.info(progname) { "Reconciling DNS records in #{backend.name} with container services" }
 
       populate_container_cache
 
       containers = @containers.values
 
-      our_live_records = @backend.dns_records.select { |rr| our_record?(rr) }
+      our_live_records = backend.dns_records.select { |rr| our_record?(rr) }
       our_desired_records = containers.map { |c| c.dns_records }.flatten(1)
 
       @logger.info(progname) { "Found #{our_live_records.length} relevant DNS records." }
@@ -115,11 +115,11 @@ module DDNSSD
 
       # Delete any of "our" records that are no longer needed
       @logger.info(progname) { "Deleting #{(our_live_records - our_desired_records).length} DNS records." }
-      (our_live_records - our_desired_records).each { |rr| @backend.suppress_record(rr) }
+      (our_live_records - our_desired_records).each { |rr| backend.suppress_record(rr) }
 
       # ... and create any new records we need
       @logger.info(progname) { "Creating #{(our_desired_records - our_live_records).uniq.length} DNS records." }
-      (our_desired_records - our_live_records).uniq.each { |rr| @backend.publish_record(rr) }
+      (our_desired_records - our_live_records).uniq.each { |rr| backend.publish_record(rr) }
     end
 
     def our_record?(rr)

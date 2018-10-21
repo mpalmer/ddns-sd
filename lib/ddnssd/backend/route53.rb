@@ -138,7 +138,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
   def initialize(config)
     super
 
-    @zone_id = config.backend_config["ZONE_ID"]
+    @zone_id = backend_config["ZONE_ID"]
 
     if @zone_id.nil? || @zone_id.empty?
       raise DDNSSD::Config::InvalidEnvironmentError,

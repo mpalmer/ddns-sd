@@ -5,6 +5,7 @@ module DDNSSD
     class Log < Backend
       def initialize(config)
         @logger = config.logger
+        @shared_records = {}
       end
 
       def dns_records
