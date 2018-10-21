@@ -6,7 +6,7 @@ require 'logger'
 Thread.abort_on_exception
 
 logger = Logger.new($stderr)
-logger.level = Logger.const_get((ENV['DDNSSD_LOG_LEVEL']  || "INFO").upcase)
+logger.level = Logger.const_get((ENV['DDNSSD_LOG_LEVEL'] || "INFO").upcase)
 
 if ENV['DDNSSD_DEBUG_MODULES'] && ENV['DDNSSD_DEBUG_MODULES'] != ""
   require 'filtered_debug_logger'
