@@ -43,3 +43,18 @@ namespace :docker do
     sh "docker push discourse/ddns-sd"
   end
 end
+
+namespace :test do
+  desc "Setup for tests"
+  task :prepare do
+    sh "dropdb pdns_test --if-exists"
+    sh "createdb pdns_test"
+    unless `psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='pdns'"`.chomp == '1'
+      sh %[psql -c "CREATE USER pdns PASSWORD 'pdnspw'"]
+    end
+    unless `psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='dnsadmin'"`.chomp == '1'
+      sh %[psql -c "CREATE USER dnsadmin PASSWORD 'dnsadminpw'"]
+    end
+    sh "psql -d pdns_test < db/pdns-schema.sql"
+  end
+end

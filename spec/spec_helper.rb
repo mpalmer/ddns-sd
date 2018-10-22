@@ -39,11 +39,15 @@ RSpec.configure do |config|
   end
 end
 
+# TODO: move to support dir
 require_relative './matcher_methods'
 require_relative './example_group_methods'
 require_relative './example_methods'
 
+Dir["./spec/support/**/*.rb"].each { |f| require f }
+
 RSpec.configure do |config|
   config.include ExampleMethods
   config.extend  ExampleGroupMethods
+  config.include PowerDNSHelper
 end

@@ -10,6 +10,7 @@ RUN adduser -D ddnssd \
 	&& addgroup ddnssd "$docker_group" \
 	&& apk update \
 	&& apk add build-base \
+	&& apk add postgresql-dev \
 	&& cd /home/ddnssd \
 	&& su -pc 'bundle install --deployment --without development' ddnssd \
 	&& apk del build-base \
