@@ -8,6 +8,9 @@ gem 'docker-api', '~> 1.33'
 # See https://github.com/swipely/docker-api/issues/409
 gem 'excon', '~> 0.59'
 gem 'frankenstein', '~> 0.1'
+gem 'pg'
+gem 'mini_sql'
+gem 'dns-sd'
 
 group :development do
   gem 'byebug'

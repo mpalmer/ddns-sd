@@ -1,0 +1,51 @@
+#!/usr/bin/env ruby
+
+# With both Route53 and Power DNS backends configured, do a diff on
+# the records that they each have.
+
+require 'ddnssd/config'
+require 'ddnssd/backend/route53'
+require 'ddnssd/backend/power_dns'
+require 'logger'
+
+logger = Logger.new($stderr)
+logger.level = "DEBUG"
+
+config = DDNSSD::Config.new(ENV, logger: logger)
+
+r53 = DDNSSD::Backend::Route53.new(config)
+pdns = DDNSSD::Backend::PowerDNS.new(config)
+
+r53_records = r53.dns_records
+pdns_records = pdns.dns_records
+
+suffix = /\.#{Regexp.escape(config.base_domain)}\z/
+
+r53_records.select! { |rr| rr.name =~ suffix }
+
+puts "Route 53:  #{r53_records.size} records"
+puts "Power DNS: #{pdns_records.size} records"
+
+diff = 0
+r53_records.each do |r53rr|
+  unless pdns_records.include?(r53rr)
+    diff += 1
+    puts "missing in Power DNS: #{r53rr.inspect}"
+  end
+end
+
+if diff == 0
+  puts "Nothing missing in Power DNS!"
+end
+
+exit 0 if diff == 0 && r53_records.size == pdns_records.size
+
+diff = 0
+pdns_records.each do |pdnsrr|
+  unless r53_records.include?(pdnsrr)
+    diff += 1
+    puts "Power DNS has this but Route 53 doesn't: #{pdnsrr.inspect}"
+  end
+end
+
+puts 'Done', ''
