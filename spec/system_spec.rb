@@ -173,6 +173,14 @@ describe DDNSSD::System do
           system.run
         end
 
+        it "does nothing if docker says the container doesn't exist" do
+          allow(Docker::Container).to receive(:get).with("destroyedalready", {}, mock_conn).and_raise(Docker::Error::NotFoundError)
+          expect(mock_queue).to receive(:pop).and_return([:started, "destroyedalready"])
+          expect(ddnssd_container).to_not receive(:publish_records).with(mock_backend)
+          allow(logger).to receive(:warn).with("DDNSSD::System")
+          system.run
+        end
+
         context "with multiple backends" do
           let(:env) { base_env.merge("DDNSSD_BACKEND" => "test_queue,log") }
 
@@ -195,6 +203,12 @@ describe DDNSSD::System do
 
           system.run
         end
+
+        it "handles a container that doesn't exist" do
+          expect(mock_queue).to receive(:pop).and_return([:stopped, "destroyedalready"])
+          allow(logger).to receive(:warn).with("DDNSSD::System")
+          system.run
+        end
       end
 
       describe ":died" do
@@ -208,6 +222,14 @@ describe DDNSSD::System do
 
             expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 0])
             expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
+
+            system.run
+          end
+
+          it "handles a container that doesn't exist" do
+            expect(mock_queue).to receive(:pop).and_return([:died, "destroyedalready", 0])
+            expect(ddnssd_container).to_not receive(:suppress_records).with(mock_backend)
+            allow(logger).to receive(:warn).with("DDNSSD::System")
 
             system.run
           end
@@ -234,6 +256,14 @@ describe DDNSSD::System do
             expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 42])
             expect(ddnssd_container).to_not receive(:suppress_records)
             expect(logger).to receive(:warn).with("DDNSSD::System")
+
+            system.run
+          end
+
+          it "handles a container that doesn't exist" do
+            expect(mock_queue).to receive(:pop).and_return([:died, "destroyedalready", 42])
+            expect(ddnssd_container).to_not receive(:suppress_records).with(mock_backend)
+            allow(logger).to receive(:warn).with("DDNSSD::System")
 
             system.run
           end

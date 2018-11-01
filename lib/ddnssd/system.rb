@@ -52,12 +52,27 @@ module DDNSSD
 
         case (item.first rescue nil)
         when :started
-          @containers[item.last] = DDNSSD::Container.new(Docker::Container.get(item.last, {}, docker_connection), @config)
-          @backends.each { |backend| @containers[item.last].publish_records(backend) }
+          docker_container = begin
+            Docker::Container.get(item.last, {}, docker_connection)
+          rescue Docker::Error::NotFoundError
+            # container was destroyed before we processed this message
+            @logger.warn(progname) { "Docker says container #{item.last} does not exist. Ignoring :started message." }
+            nil
+          end
+
+          if docker_container
+            @containers[item.last] = DDNSSD::Container.new(docker_container, @config)
+            @backends.each { |backend| @containers[item.last].publish_records(backend) }
+          end
         when :stopped
-          @containers[item.last].stopped = true
+          @containers[item.last].stopped = true if @containers[item.last]
         when :died
           _, id, exitcode = item
+          unless @containers[id]
+            @logger.warn(progname) { "Container #{id} died, but we're not tracking it. Ignoring :died message." }
+            next
+          end
+
           if exitcode == 0 || @containers[id].stopped
             @backends.each { |backend| @containers[id].suppress_records(backend) }
           else
