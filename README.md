@@ -472,12 +472,12 @@ Be aware that there are all sorts of caveats with using aliases:
   that the alias consumer will understand.
 
 * Very little (read: no) validation is done on the values you pass to
-the `aliases` label; anything you do wrong will be reflected in broken or
-invalid CNAME records.
+  the `aliases` label; anything you do wrong will be reflected in broken or
+  invalid CNAME records.
 
 * If you have two machines both trying to register the same alias, they'll
-probably fight over it and the address will change back and forth, as CNAMEs
-are pure last-write-wins.
+  probably fight over it and the address will change back and forth, as CNAMEs
+  are pure last-write-wins.
 
 You may notice that these problems are all avoided if you just use `SRV`
 records as `$DEITY` intended.  That is, after all, what we're all here for.
