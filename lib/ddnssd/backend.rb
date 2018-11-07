@@ -14,7 +14,11 @@ module DDNSSD
       @config = config
       @logger = @config.logger
 
-      @request_stats = Frankenstein::Request.new(:ddnssd_backend, description: "DNS backend", registry: @config.metrics_registry)
+      @request_stats = Frankenstein::Request.new(
+        "ddnssd_backend_#{name}",
+        description: "DNS backend #{name}",
+        registry: @config.metrics_registry
+      )
 
       @shared_records = {}
     end
