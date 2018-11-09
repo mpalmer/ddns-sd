@@ -13,6 +13,7 @@ describe DDNSSD::Backend do
   before(:each) do
     allow(mock_config).to receive(:logger).and_return(logger)
     allow(mock_config).to receive(:metrics_registry).and_return(Prometheus::Client::Registry.new)
+    allow(mock_config).to receive(:base_domain).and_return("example.com")
   end
 
   describe "#publish_record" do
@@ -60,8 +61,6 @@ describe DDNSSD::Backend do
   end
 
   describe "#suppress_record" do
-    before(:each) { allow(mock_config).to receive(:base_domain).and_return("example.com") }
-
     it "calls remove_record on a per-container IPv4 address" do
       rr = DDNSSD::DNSRecord.new("abcd1234.foo.example.com", 60, :A, "172.17.0.42")
 
@@ -119,7 +118,6 @@ describe DDNSSD::Backend do
 
   describe "#suppress_shared_records" do
     before(:each) do
-      allow(mock_config).to receive(:base_domain).and_return("example.com")
       allow(mock_config).to receive(:host_dns_record).and_return(DDNSSD::DNSRecord.new("foo.example.com", 60, :A, "192.0.2.42"))
     end
 
