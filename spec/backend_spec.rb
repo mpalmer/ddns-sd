@@ -13,10 +13,14 @@ describe DDNSSD::Backend do
   before(:each) do
     allow(mock_config).to receive(:logger).and_return(logger)
     allow(mock_config).to receive(:metrics_registry).and_return(Prometheus::Client::Registry.new)
-    allow(mock_config).to receive(:base_domain).and_return("example.com")
+    allow(mock_config).to receive(:backend_configs).and_return("backend" => {})
   end
 
   describe "#publish_record" do
+    before(:each) do
+      allow(backend).to receive(:base_domain).and_return("example.com")
+    end
+
     it "calls set_record for an A record" do
       rr = DDNSSD::DNSRecord.new("foo.example.com", 60, :A, "192.0.2.42")
 
@@ -61,6 +65,10 @@ describe DDNSSD::Backend do
   end
 
   describe "#suppress_record" do
+    before(:each) do
+      allow(backend).to receive(:base_domain).and_return("example.com")
+    end
+
     it "calls remove_record on a per-container IPv4 address" do
       rr = DDNSSD::DNSRecord.new("abcd1234.foo.example.com", 60, :A, "172.17.0.42")
 
@@ -119,6 +127,7 @@ describe DDNSSD::Backend do
   describe "#suppress_shared_records" do
     before(:each) do
       allow(mock_config).to receive(:host_dns_record).and_return(DDNSSD::DNSRecord.new("foo.example.com", 60, :A, "192.0.2.42"))
+      allow(backend).to receive(:base_domain).and_return("example.com")
     end
 
     it "calls remove_record on the host's IPv4 address" do
@@ -135,6 +144,27 @@ describe DDNSSD::Backend do
       expect(backend).to receive(:remove_record).with(rr)
       backend.suppress_record(rr)
       backend.suppress_shared_records
+    end
+  end
+
+  context "#base_domain" do
+    context "with no backend-specific config" do
+      it "gets the base domain from the system config" do
+        expect(mock_config).to receive(:base_domain).and_return("example.com")
+
+        expect(backend.__send__(:base_domain)).to eq("example.com")
+      end
+    end
+
+    context "with a backend-specific base domain" do
+      it "uses the backend-specific base domain" do
+        expect(mock_config)
+          .to receive(:backend_configs)
+          .and_return("backend" => { "BASE_DOMAIN" => "example.net" })
+        expect(mock_config).to_not receive(:base_domain)
+
+        expect(backend.__send__(:base_domain)).to eq("example.net")
+      end
     end
   end
 end

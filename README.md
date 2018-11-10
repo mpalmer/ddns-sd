@@ -91,14 +91,19 @@ otherwise the program will immediately exit with an error message.
 
 * **`DDNSSD_BASE_DOMAIN`**
 
-    The FQDN under which all DNS records will be created and managed.
-    Addresses and aliases (CNAMEs) will be created directly under this name,
-    whilst all discovery records (SRV, PTR, TXT) will be created under
-    `_tcp.<DDNSSD_BASE_DOMAIN>` and `_udp.<DDNSSD_BASE_DOMAIN>`.
+    The FQDN under which all DNS records will be created and managed by
+    default.  Addresses and aliases (CNAMEs) will be created directly under
+    this name, whilst all discovery records (SRV, PTR, TXT) will be created
+    under `_tcp.<DDNSSD_BASE_DOMAIN>` and `_udp.<DDNSSD_BASE_DOMAIN>`.
 
     Depending on your chosen backend, you may need to specify some sort of
     "zone identifier"; all hell may break loose if you set this to a value
     which isn't under the identified zone.
+
+    You can override the default base domain for a specific backend by
+    specifying a backend-specific `DDNSSD_<BACKEND>_BASE_DOMAIN` environment
+    variable.
+
 
 * **`DDNSSD_BACKEND`**
 
