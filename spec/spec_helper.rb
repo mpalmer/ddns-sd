@@ -30,9 +30,9 @@ SimpleCov.formatters = SimpleCov::Formatter::MultiFormatter.new([
 ])
 
 RSpec.configure do |config|
-  config.fail_fast = true
-  config.order     = :random
-  #config.full_backtrace = true
+  config.order          = :random
+  config.fail_fast      = !!ENV["RSPEC_CONFIG_FAIL_FAST"]
+  config.full_backtrace = !!ENV["RSPEC_CONFIG_FULL_BACKTRACE"]
 
   config.expect_with :rspec do |c|
     c.syntax = :expect
