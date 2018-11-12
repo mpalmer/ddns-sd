@@ -42,7 +42,7 @@ describe DDNSSD::ServiceInstance do
   end
 
   describe "#dns_records" do
-    let(:result) { instance.dns_records }
+    let(:result) { instance.dns_records('example.com') }
 
     context "with just a port label" do
       let(:labels) do
@@ -597,6 +597,96 @@ describe DDNSSD::ServiceInstance do
       end
 
       it_behaves_like "a service instance error"
+    end
+
+    context "with a different base_domain arg" do
+      context "with a port and instance labels" do
+        let(:labels) do
+          {
+            "port" => "80",
+            "instance" => "flibbety"
+          }
+        end
+
+        let(:result) { instance.dns_records('sd.example.com') }
+
+        context "exposed port" do
+          let(:docker_container) { container_fixture("exposed_port80") }
+
+          it "has a SRV record pointing to the container+exposed port" do
+            expect(result).to have_SRV_record("flibbety._http._tcp.sd", "0 0 80 asdfasdfexpo.speccy.sd.example.com")
+          end
+
+          it "has an empty TXT record" do
+            expect(result).to have_TXT_record("flibbety._http._tcp.sd", [""])
+          end
+
+          it "points to the service instance" do
+            expect(result).to have_PTR_record("_http._tcp.sd", "flibbety._http._tcp.sd.example.com")
+          end
+        end
+
+        context "published port" do
+          let(:docker_container) { container_fixture("published_port80") }
+
+          it "has a SRV record pointing to the host+published port" do
+            expect(result).to have_SRV_record("flibbety._http._tcp.sd", "0 0 8080 speccy.sd.example.com")
+          end
+
+          it "has an empty TXT record" do
+            expect(result).to have_TXT_record("flibbety._http._tcp.sd", [""])
+          end
+
+          it "points to the service instance" do
+            expect(result).to have_PTR_record("_http._tcp.sd", "flibbety._http._tcp.sd.example.com")
+          end
+        end
+      end
+    end
+
+    context "with no base_domain arg" do
+      context "with a port and instance labels" do
+        let(:labels) do
+          {
+            "port" => "80",
+            "instance" => "flibbety"
+          }
+        end
+
+        let(:result) { instance.dns_records }
+
+        context "exposed port" do
+          let(:docker_container) { container_fixture("exposed_port80") }
+
+          it "has a SRV record pointing to the container+exposed port" do
+            expect(result).to have_SRV_record("flibbety._http._tcp", "0 0 80 asdfasdfexpo.speccy.example.com")
+          end
+
+          it "has an empty TXT record" do
+            expect(result).to have_TXT_record("flibbety._http._tcp", [""])
+          end
+
+          it "points to the service instance" do
+            expect(result).to have_PTR_record("_http._tcp", "flibbety._http._tcp.example.com")
+          end
+        end
+
+        context "published port" do
+          let(:docker_container) { container_fixture("published_port80") }
+
+          it "has a SRV record pointing to the host+published port" do
+            expect(result).to have_SRV_record("flibbety._http._tcp", "0 0 8080 speccy.example.com")
+          end
+
+          it "has an empty TXT record" do
+            expect(result).to have_TXT_record("flibbety._http._tcp", [""])
+          end
+
+          it "points to the service instance" do
+            expect(result).to have_PTR_record("_http._tcp", "flibbety._http._tcp.example.com")
+          end
+        end
+      end
     end
   end
 end

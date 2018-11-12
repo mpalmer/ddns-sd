@@ -1,0 +1,18 @@
+- name: pub80._http._tcp.sd.example.com
+  type: :SRV
+  ttl: 60
+  data:
+  - 0
+  - 0
+  - 8080
+  - speccy.sd.example.com
+- name: pub80._http._tcp.sd.example.com
+  type: :TXT
+  ttl: 60
+  data:
+  - ""
+- name: _http._tcp.sd.example.com
+  type: :PTR
+  ttl: 60
+  data:
+  - pub80._http._tcp.sd.example.com
