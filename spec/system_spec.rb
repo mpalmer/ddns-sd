@@ -59,6 +59,7 @@ describe DDNSSD::System do
     allow(DDNSSD::Backend::Log).to receive(:new).with(instance_of(DDNSSD::Config)).and_return(mock_log_backend)
     allow(mock_queue).to receive(:push)
     allow(mock_watcher).to receive(:shutdown)
+    allow(mock_backend).to receive(:base_domain).and_return(env['DDNSSD_BASE_DOMAIN'])
     allow(mock_backend).to receive(:publish_record)
     allow(mock_log_backend).to receive(:publish_record)
   end
@@ -448,6 +449,48 @@ describe DDNSSD::System do
         end
 
         system.send(:reconcile_containers, mock_backend)
+      end
+    end
+
+    context "when base domain is overridden for the backend" do
+      let(:env) do
+        base_env.merge('DDNSSD_TEST_QUEUE_BASE_DOMAIN' => 'sd.example.com')
+      end
+
+      before do
+        allow(mock_backend).to receive(:base_domain).and_return(env['DDNSSD_TEST_QUEUE_BASE_DOMAIN'])
+      end
+
+      context "missing all the records" do
+        let(:dns_records) { [] }
+        let(:docker_containers) { container_fixtures("exposed_port80", "published_port80") }
+
+        it 'adds records using the correct base domain' do
+          dns_record_fixtures("exposed_port80_sd").each do |rr|
+            expect(mock_backend).to receive(:publish_record).with(eq(rr)).ordered
+          end
+          dns_record_fixture("published_port80_sd").each do |rr|
+            expect(mock_backend).to receive(:publish_record).with(eq(rr)).ordered
+          end
+          system.send(:reconcile_containers, mock_backend)
+        end
+      end
+
+      context 'has all the records' do
+        let(:dns_records) { dns_record_fixtures('exposed_port80_sd', 'published_port80_sd') }
+        let(:docker_containers) { [] }
+
+        it 'removes them using the correct base domain' do
+          dns_record_fixtures("exposed_port80_sd").each do |rr|
+            next if [Resolv::DNS::Resource::IN::TXT, Resolv::DNS::Resource::IN::PTR].include?(rr.data.class)
+            expect(mock_backend).to receive(:suppress_record).with(eq(rr))
+          end
+          dns_record_fixture("published_port80_sd").each do |rr|
+            next if [Resolv::DNS::Resource::IN::TXT, Resolv::DNS::Resource::IN::PTR].include?(rr.data.class)
+            expect(mock_backend).to receive(:suppress_record).with(eq(rr))
+          end
+          system.send(:reconcile_containers, mock_backend)
+        end
       end
     end
   end
