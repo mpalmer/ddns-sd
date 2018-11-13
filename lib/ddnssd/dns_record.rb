@@ -17,6 +17,22 @@ module DDNSSD
       @data = Resolv::DNS::Resource::IN.const_get(type).new(*data)
     end
 
+    def self.new_relative_from_absolute(base_domain, name, ttl, type, *data)
+      s = ".#{base_domain}"
+
+      rel_data =
+        case type
+        when :PTR, :CNAME
+          [data[0].chomp(s)]
+        when :SRV
+          data[0, 3] + [data[3].chomp(s)]
+        else
+          data
+        end
+
+      new(name.chomp(s), ttl, type, *rel_data)
+    end
+
     def raw_name
       @name
     end
@@ -42,6 +58,15 @@ module DDNSSD
       else
         raise RuntimeError,
           "Unknown RR type #{@type.inspect}, can't convert to value"
+      end
+    end
+
+    def value_absolute(base_domain)
+      case @type
+      when :PTR, :SRV, :CNAME
+        "#{value}.#{base_domain}"
+      else
+        value
       end
     end
 

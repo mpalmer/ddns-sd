@@ -316,7 +316,7 @@ describe DDNSSD::Backend::Route53 do
           .and_call_original
         expect(r53).to_not receive(:list_resource_record_sets)
 
-        backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :A, "192.0.2.42"))
+        backend.publish_record(DDNSSD::DNSRecord.new("flingle", 42, :A, "192.0.2.42"))
       end
 
       context "on Throttling error" do
@@ -350,7 +350,7 @@ describe DDNSSD::Backend::Route53 do
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
           expect(Kernel).to_not receive(:sleep)
 
-          backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :A, "192.0.2.42"))
+          backend.publish_record(DDNSSD::DNSRecord.new("flingle", 42, :A, "192.0.2.42"))
         end
       end
 
@@ -385,7 +385,7 @@ describe DDNSSD::Backend::Route53 do
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
           expect(Kernel).to_not receive(:sleep)
 
-          backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :A, "192.0.2.42"))
+          backend.publish_record(DDNSSD::DNSRecord.new("flingle", 42, :A, "192.0.2.42"))
         end
       end
     end
@@ -413,7 +413,7 @@ describe DDNSSD::Backend::Route53 do
           .and_call_original
         expect(r53).to_not receive(:list_resource_record_sets)
 
-        backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
+        backend.publish_record(DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::42"))
       end
     end
 
@@ -440,7 +440,7 @@ describe DDNSSD::Backend::Route53 do
           .and_call_original
         expect(r53).to_not receive(:list_resource_record_sets)
 
-        backend.publish_record(DDNSSD::DNSRecord.new("db.example.com", 42, :CNAME, "pgsql.host27.example.com"))
+        backend.publish_record(DDNSSD::DNSRecord.new("db", 42, :CNAME, "pgsql.host27"))
       end
     end
 
@@ -467,7 +467,7 @@ describe DDNSSD::Backend::Route53 do
           .and_call_original
         expect(r53).to_not receive(:list_resource_record_sets)
 
-        backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, 'something "funny"', "this too"))
+        backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :TXT, 'something "funny"', "this too"))
       end
     end
 
@@ -495,15 +495,15 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+          backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22"))
         end
       end
 
       context "with existing records for the name/type" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host1.example.com"),
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host3.example.com")
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host1"),
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host3")
           )
         end
 
@@ -543,16 +543,16 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+          backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22"))
         end
       end
 
       context "with the record already existent" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host1.example.com"),
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host3.example.com"),
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com")
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host1"),
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host3"),
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22")
           )
         end
 
@@ -593,7 +593,7 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+          backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22"))
         end
       end
 
@@ -678,15 +678,15 @@ describe DDNSSD::Backend::Route53 do
               .and_call_original
             expect(r53).to_not receive(:list_resource_record_sets).ordered
 
-            backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+            backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22"))
           end
         end
 
         context "with records disappearing" do
           before(:each) do
             backend.instance_variable_get(:@record_cache).set(
-              DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host1.example.com"),
-              DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host3.example.com")
+              DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host1"),
+              DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host3")
             )
           end
 
@@ -747,7 +747,7 @@ describe DDNSSD::Backend::Route53 do
                    ).and_call_original.ordered
             expect(r53).to_not receive(:list_resource_record_sets).ordered
 
-            backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+            backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22"))
           end
         end
 
@@ -774,7 +774,7 @@ describe DDNSSD::Backend::Route53 do
               expect(r53).to_not receive(:list_resource_record_sets)
               expect(r53).to_not receive(:change_resource_record_sets)
 
-              backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+              backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22"))
             end
           end
         end
@@ -805,15 +805,15 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+          backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp"))
         end
       end
 
       context "with existing records for the name/type" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "xyzzy._http._tcp.example.com"),
-            DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "argle._http._tcp.example.com")
+            DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "xyzzy._http._tcp"),
+            DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "argle._http._tcp")
           )
         end
 
@@ -853,14 +853,14 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+          backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp"))
         end
       end
 
       context "including the one we want to add" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com")
+            DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp")
           )
         end
 
@@ -897,7 +897,7 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+          backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp"))
         end
       end
 
@@ -982,15 +982,15 @@ describe DDNSSD::Backend::Route53 do
               .and_call_original
             expect(r53).to_not receive(:list_resource_record_sets).ordered
 
-            backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+            backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp"))
           end
         end
 
         context "with records disappearing" do
           before(:each) do
             backend.instance_variable_get(:@record_cache).set(
-              DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "xyzzy._http._tcp.example.com"),
-              DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "argle._http._tcp.example.com")
+              DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "xyzzy._http._tcp"),
+              DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "argle._http._tcp")
             )
           end
 
@@ -1051,7 +1051,7 @@ describe DDNSSD::Backend::Route53 do
                    ).and_call_original.ordered
             expect(r53).to_not receive(:list_resource_record_sets).ordered
 
-            backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+            backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp"))
           end
         end
       end
@@ -1063,7 +1063,7 @@ describe DDNSSD::Backend::Route53 do
       context "with no other records in the set" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42")
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42")
           )
         end
 
@@ -1089,16 +1089,16 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42"))
         end
       end
 
       context "with other records in the set" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.1"),
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"),
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.180")
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.1"),
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42"),
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.180")
           )
         end
 
@@ -1138,15 +1138,15 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42"))
         end
       end
 
       context "with our record already gone" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.1"),
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.180")
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.1"),
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.180")
           )
         end
 
@@ -1185,14 +1185,14 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42"))
         end
       end
 
       context "when faced with an InvalidChangeBatch error" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42")
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42")
           )
         end
 
@@ -1259,7 +1259,7 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets).ordered
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42"))
         end
 
         context "that never resolves" do
@@ -1285,7 +1285,7 @@ describe DDNSSD::Backend::Route53 do
               expect(r53).to_not receive(:list_resource_record_sets)
               expect(r53).to_not receive(:change_resource_record_sets)
 
-              backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
+              backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42"))
             end
           end
         end
@@ -1314,9 +1314,9 @@ describe DDNSSD::Backend::Route53 do
 
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.1"),
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"),
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.180")
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.1"),
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42"),
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.180")
           )
         end
 
@@ -1330,7 +1330,7 @@ describe DDNSSD::Backend::Route53 do
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
           expect(Kernel).to_not receive(:sleep)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42"))
         end
       end
 
@@ -1357,9 +1357,9 @@ describe DDNSSD::Backend::Route53 do
 
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.1"),
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"),
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.180")
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.1"),
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42"),
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.180")
           )
         end
 
@@ -1373,7 +1373,7 @@ describe DDNSSD::Backend::Route53 do
           expect(r53).to receive(:change_resource_record_sets).and_call_original.ordered
           expect(Kernel).to_not receive(:sleep)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42"))
         end
       end
     end
@@ -1382,7 +1382,7 @@ describe DDNSSD::Backend::Route53 do
       context "with no other records in the set" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42")
+            DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::42")
           )
         end
 
@@ -1408,16 +1408,16 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::42"))
         end
       end
 
       context "with other records in the set" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::1"),
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"),
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::180")
+            DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::1"),
+            DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::42"),
+            DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::180")
           )
         end
 
@@ -1457,15 +1457,15 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::42"))
         end
       end
 
       context "with our record already gone" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::1"),
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::180")
+            DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::1"),
+            DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::180")
           )
         end
 
@@ -1504,7 +1504,7 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::42"))
         end
       end
     end
@@ -1513,7 +1513,7 @@ describe DDNSSD::Backend::Route53 do
       context "with no other records in the set" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host42.example.com")
+            DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host42")
           )
         end
 
@@ -1539,16 +1539,16 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host42.example.com"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host42"))
         end
       end
 
       context "with other records in the set" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host1.example.com"),
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host42.example.com"),
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host180.example.com")
+            DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host1"),
+            DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host42"),
+            DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host180")
           )
         end
 
@@ -1588,15 +1588,15 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host42.example.com"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host42"))
         end
       end
 
       context "with our record already gone" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host1.example.com"),
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host180.example.com")
+            DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host1"),
+            DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host180")
           )
         end
 
@@ -1635,7 +1635,7 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host42.example.com"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host42"))
         end
       end
     end
@@ -1644,8 +1644,8 @@ describe DDNSSD::Backend::Route53 do
       context "with other SRV records present" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host1.example.com"),
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host2.example.com")
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host1"),
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host2")
           )
         end
 
@@ -1683,15 +1683,15 @@ describe DDNSSD::Backend::Route53 do
             .and_call_original
           expect(r53).to_not receive(:list_resource_record_sets)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host2.example.com"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host2"))
         end
 
         context "when faced with an InvalidChangeBatch error" do
           before(:each) do
             backend.instance_variable_get(:@record_cache).set(
-              DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host1.example.com"),
-              DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host3.example.com"),
-              DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com")
+              DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host1"),
+              DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host3"),
+              DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22")
             )
           end
 
@@ -1786,7 +1786,7 @@ describe DDNSSD::Backend::Route53 do
               .and_call_original
             expect(r53).to_not receive(:list_resource_record_sets).ordered
 
-            backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host1.example.com"))
+            backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host1"))
           end
 
           context "that never resolves" do
@@ -1813,7 +1813,7 @@ describe DDNSSD::Backend::Route53 do
                 expect(r53).to_not receive(:list_resource_record_sets)
                 expect(r53).to_not receive(:change_resource_record_sets)
 
-                backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host1.example.com"))
+                backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host1"))
               end
             end
           end
@@ -1823,17 +1823,17 @@ describe DDNSSD::Backend::Route53 do
       context "with no other SRV records present" do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host1.example.com")
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host1")
           )
           backend.instance_variable_get(:@record_cache).set(
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, "something funny")
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :TXT, "something funny")
           )
         end
 
         context "with no other PTR records" do
           before(:each) do
             backend.instance_variable_get(:@record_cache).set(
-              DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com")
+              DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp")
             )
           end
 
@@ -1881,15 +1881,15 @@ describe DDNSSD::Backend::Route53 do
               .and_call_original
             expect(r53).to_not receive(:list_resource_record_sets)
 
-            backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host1.example.com"))
+            backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host1"))
           end
         end
 
         context "with other PTR records" do
           before(:each) do
             backend.instance_variable_get(:@record_cache).set(
-              DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "blargh._http._tcp.example.com"),
-              DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com")
+              DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "blargh._http._tcp"),
+              DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp")
             )
           end
 
@@ -1949,7 +1949,7 @@ describe DDNSSD::Backend::Route53 do
               .and_call_original
             expect(r53).to_not receive(:list_resource_record_sets)
 
-            backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host1.example.com"))
+            backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host1"))
           end
 
           context "when faced with an InvalidChangeBatch error" do
@@ -2099,7 +2099,7 @@ describe DDNSSD::Backend::Route53 do
                 .and_call_original
               expect(r53).to_not receive(:list_resource_record_sets).ordered
 
-              backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host1.example.com"))
+              backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host1"))
             end
           end
         end
@@ -2108,13 +2108,13 @@ describe DDNSSD::Backend::Route53 do
 
     context "with a TXT record" do
       it "logs an error" do
-        expect { backend.suppress_record(DDNSSD::DNSRecord.new("x.example.com", 60, :TXT, "")) }.to raise_error(DDNSSD::Backend::InvalidRequest)
+        expect { backend.suppress_record(DDNSSD::DNSRecord.new("x", 60, :TXT, "")) }.to raise_error(DDNSSD::Backend::InvalidRequest)
       end
     end
 
     context "with a PTR record" do
       it "logs an error" do
-        expect { backend.suppress_record(DDNSSD::DNSRecord.new("x.example.com", 60, :PTR, "faff.example.com")) }.to raise_error(DDNSSD::Backend::InvalidRequest)
+        expect { backend.suppress_record(DDNSSD::DNSRecord.new("x", 60, :PTR, "faff.example.com")) }.to raise_error(DDNSSD::Backend::InvalidRequest)
       end
     end
 
@@ -2127,12 +2127,12 @@ describe DDNSSD::Backend::Route53 do
     context "receiving any other error" do
       it "logs an error and gives up" do
         backend.instance_variable_get(:@record_cache).set(
-          DDNSSD::DNSRecord.new("abcd1234.faff.example.com", 42, :A, "192.0.2.42")
+          DDNSSD::DNSRecord.new("abcd1234.faff", 42, :A, "192.0.2.42")
         )
         expect(r53).to receive(:change_resource_record_sets).and_raise(RuntimeError)
         expect(logger).to receive(:error)
 
-        backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.faff.example.com", 42, :A, "192.0.2.42"))
+        backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.faff", 42, :A, "192.0.2.42"))
       end
     end
   end

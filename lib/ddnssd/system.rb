@@ -138,7 +138,7 @@ module DDNSSD
     end
 
     def our_record?(rr)
-      suffix = /#{Regexp.escape(@config.hostname)}\.#{Regexp.escape(@config.base_domain)}\z/
+      suffix = /#{Regexp.escape(@config.hostname)}\z/
 
       case rr.data
       when Resolv::DNS::Resource::IN::A, Resolv::DNS::Resource::IN::AAAA
