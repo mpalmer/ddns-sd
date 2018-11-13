@@ -33,6 +33,24 @@ module DDNSSD
       new(name.chomp(s), ttl, type, *rel_data)
     end
 
+    def self.new_absolute_from_relative(base_domain, rr)
+      absolute_data =
+        case rr.type
+        when :A, :AAAA
+          [rr.data.address]
+        when :PTR, :CNAME
+          ["#{rr.data.name}.#{base_domain}"]
+        when :TXT
+          rr.data.strings
+        when :SRV
+          [rr.data.priority, rr.data.weight, rr.data.port, "#{rr.data.target}.#{base_domain}"]
+        else
+          raise RuntimeError, "Unknown RR type #{rr.type.inspect}"
+        end
+
+      new("#{rr.name}.#{base_domain}", rr.ttl, rr.type, *absolute_data)
+    end
+
     def raw_name
       @name
     end

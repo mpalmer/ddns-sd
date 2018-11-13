@@ -4,12 +4,13 @@ module DDNSSD
   module PowerDNS
     class ResourceRecordStore
 
-      def initialize(backend, logger)
+      def initialize(backend, base_domain, logger)
         @backend = backend
+        @base_domain = base_domain
         @logger = logger
         @domain_id = @backend.db.query(
           "SELECT id FROM domains WHERE name = :domain_name",
-          domain_name: @backend.base_domain
+          domain_name: @base_domain
         ).first.id
       end
 
@@ -83,7 +84,7 @@ module DDNSSD
       private
 
       def progname
-        @logger_progname ||= "#{self.class.name}(#{@backend.base_domain})"
+        @logger_progname ||= "#{self.class.name}(#{@base_domain})"
       end
 
     end

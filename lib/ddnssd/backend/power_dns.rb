@@ -16,12 +16,8 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
 
   class PGServerNotFound < DDNSSD::Error; end
 
-  attr_reader :base_domain
-
   def initialize(config)
     super
-
-    @base_domain = config.base_domain
 
     %w(PG_DBNAME PG_USER PG_PASSWORD).each do |env_var|
       if (backend_config[env_var] || '').empty?
@@ -109,7 +105,7 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
   def set_record(rr)
     @logger.debug(progname) { "-> set_record(#{rr.inspect})" }
     @stats.measure(op: "add") do
-      retryable { resource_record_store.add(rr) }
+      retryable { resource_record_store.add(absolute(rr)) }
     end
     @logger.debug(progname) { "<- set_record(#{rr.inspect})" }
   end
@@ -117,7 +113,7 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
   def add_record(rr)
     @logger.debug(progname) { "-> add_record(#{rr.inspect})" }
     @stats.measure(op: "add") do
-      retryable { resource_record_store.add(rr) }
+      retryable { resource_record_store.add(absolute(rr)) }
     end
     @logger.debug(progname) { "<- add_record(#{rr.inspect})" }
   end
@@ -125,13 +121,15 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
   def remove_record(rr)
     @logger.debug(progname) { "-> remove_record(#{rr.inspect})" }
     @stats.measure(op: "remove") do
-      retryable { resource_record_store.remove(rr) }
+      retryable { resource_record_store.remove(absolute(rr)) }
     end
     @logger.debug(progname) { "<- remove_record(#{rr.inspect})" }
   end
 
-  def remove_srv_record(srv_record)
+  def remove_srv_record(rel_srv_record)
     @logger.debug(progname) { "-> remove_srv_record(#{srv_record.inspect})" }
+
+    srv_record = absolute(rel_srv_record)
 
     @stats.measure(op: "remove_srv") do
       retryable do
@@ -182,12 +180,16 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
   private
 
   def progname
-    @logger_progname ||= "#{self.class.name}(#{@base_domain})"
+    @logger_progname ||= "#{self.class.name}(#{base_domain})"
   end
 
   def resource_record_store
     @resource_record_store ||=
-      DDNSSD::PowerDNS::ResourceRecordStore.new(self, @logger)
+      DDNSSD::PowerDNS::ResourceRecordStore.new(self, base_domain, @logger)
+  end
+
+  def absolute(rr)
+    DDNSSD::DNSRecord.new_absolute_from_relative(base_domain, rr)
   end
 
   def next_timeout(prev_timeout = nil)
