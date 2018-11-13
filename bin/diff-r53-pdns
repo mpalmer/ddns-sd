@@ -19,33 +19,54 @@ pdns = DDNSSD::Backend::PowerDNS.new(config)
 r53_records = r53.dns_records
 pdns_records = pdns.dns_records
 
-suffix = /\.#{Regexp.escape(config.base_domain)}\z/
-
-r53_records.select! { |rr| rr.name =~ suffix }
+r53_records.select! { |rr| rr.name =~ /\.#{Regexp.escape(r53.base_domain)}\z/ }
+if pdns.base_domain.end_with?(r53.base_domain)
+  r53_records.reject! { |rr| rr.name =~ /\.#{Regexp.escape(pdns.base_domain)}\z/ }
+end
 
 puts "Route 53:  #{r53_records.size} records"
 puts "Power DNS: #{pdns_records.size} records"
 
-diff = 0
-r53_records.each do |r53rr|
-  unless pdns_records.include?(r53rr)
-    diff += 1
-    puts "missing in Power DNS: #{r53rr.inspect}"
-  end
+def print_rr(rr)
+  "#{rr.name} #{rr.type} #{rr.ttl} #{rr.value}"
 end
 
-if diff == 0
-  puts "Nothing missing in Power DNS!"
+def compare(list1, list2, base1, base2, list2_name)
+  diff = 0
+
+  same_base_domain = (base1 == base2)
+  b1regex = /\.#{Regexp.escape(base1)}\z/
+  b2regex = /\.#{Regexp.escape(base2)}\z/
+
+  list1.each do |rr|
+    found = if same_base_domain
+      list2.include?(rr)
+    else
+      list2.any? do |otherr|
+        rr.type == otherr.type &&
+          rr.ttl == otherr.ttl &&
+          rr.name.gsub(b1regex, '') == otherr.name.gsub(b2regex, '') &&
+          rr.value.gsub(b1regex, '') == otherr.value.gsub(b2regex, '')
+      end
+    end
+
+    unless found
+      diff += 1
+      puts "missing equivalent record in  #{list2_name}: #{print_rr(rr)}"
+    end
+  end
+
+  if diff == 0
+    puts "Nothing missing in #{list2_name}!"
+  end
+
+  diff
 end
+
+diff = compare(r53_records, pdns_records, r53.base_domain, pdns.base_domain, 'Power DNS')
 
 exit 0 if diff == 0 && r53_records.size == pdns_records.size
 
-diff = 0
-pdns_records.each do |pdnsrr|
-  unless r53_records.include?(pdnsrr)
-    diff += 1
-    puts "Power DNS has this but Route 53 doesn't: #{pdnsrr.inspect}"
-  end
-end
+diff = compare(pdns_records, r53_records, pdns.base_domain, r53.base_domain, 'Route 53')
 
 puts 'Done', ''
