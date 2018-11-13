@@ -36,8 +36,8 @@ module DDNSSD
       @id[0..11]
     end
 
-    def dns_records(base_domain = nil)
-      @service_instances.map { |si| si.dns_records(base_domain || @config.base_domain) }.flatten(1)
+    def dns_records
+      @service_instances.map { |si| si.dns_records }.flatten(1)
     end
 
     def port_exposed?(spec)

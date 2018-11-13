@@ -120,8 +120,8 @@ module DDNSSD
 
       containers = @containers.values
 
-      our_live_records = backend.dns_records.select { |rr| our_record?(rr, backend.base_domain) }
-      our_desired_records = containers.map { |c| c.dns_records(backend.base_domain) }.flatten(1)
+      our_live_records = backend.dns_records.select { |rr| our_record?(rr) }
+      our_desired_records = containers.map { |c| c.dns_records }.flatten(1)
 
       @logger.info(progname) { "Found #{our_live_records.length} relevant DNS records." }
       @logger.debug(progname) { (["Relevant DNS records:"] + our_live_records.map { |rr| "#{rr.name} #{rr.ttl} #{rr.type} #{rr.value}" }).join("\n  ") } unless our_live_records.empty?
@@ -137,8 +137,8 @@ module DDNSSD
       (our_desired_records - our_live_records).uniq.each { |rr| backend.publish_record(rr) }
     end
 
-    def our_record?(rr, base_domain)
-      suffix = /#{Regexp.escape(@config.hostname)}\.#{Regexp.escape(base_domain)}\z/
+    def our_record?(rr)
+      suffix = /#{Regexp.escape(@config.hostname)}\.#{Regexp.escape(@config.base_domain)}\z/
 
       case rr.data
       when Resolv::DNS::Resource::IN::A, Resolv::DNS::Resource::IN::AAAA

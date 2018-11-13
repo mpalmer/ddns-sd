@@ -101,10 +101,6 @@ module DDNSSD
       end
     end
 
-    def base_domain
-      backend_config["BASE_DOMAIN"] || @config.base_domain
-    end
-
     private
 
     def progname
@@ -113,6 +109,10 @@ module DDNSSD
 
     def backend_config
       @config.backend_configs[name]
+    end
+
+    def base_domain
+      backend_config["BASE_DOMAIN"] || @config.base_domain
     end
   end
 end
