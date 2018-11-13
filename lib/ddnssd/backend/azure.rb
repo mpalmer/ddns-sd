@@ -41,12 +41,13 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     end
 
     def az_to_dnssd_rset_name(rrset)
-      "#{ rrset.name }.#{ @zone_name }".chomp(".")
+      rrset.name&.chomp('.') || ''
     end
 
     def az_to_dnssd_records(rrset)
-      record_type = az_to_dnssd_rset_type rrset
-      full_name = az_to_dnssd_rset_name rrset
+      record_type = az_to_dnssd_rset_type(rrset)
+      full_name = az_to_dnssd_rset_name(rrset)
+      zone_str = ".#{@zone_name}"
 
       records_raw =
         case record_type
@@ -54,9 +55,9 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
         when :AAAA then rrset.aaaa_records.map { |r| { type: "AAAA", value: r.ipv6address } }
         when :NS then rrset.ns_records.map { |r| { type: "NS", value: r.nsdname } }
         when :PTR then rrset.ptr_records.map { |r| { type: "PTR", value: r.ptrdname } }
-        when :SRV then rrset.srv_records.map { |r| { type: "SRV", value: "#{ r.priority } #{ r.weight } #{ r.port } #{ r.target }" } }
+        when :SRV then rrset.srv_records.map { |r| { type: "SRV", value: "#{ r.priority } #{ r.weight } #{ r.port } #{ r.target.chomp(zone_str) }" } }
         when :TXT then rrset.txt_records.map { |r| { type: "TXT", value: r.value } }
-        when :CNAME then [{ type: "CNAME", value: rrset.cname_record.cname }]
+        when :CNAME then [{ type: "CNAME", value: rrset.cname_record.cname.chomp(zone_str) }]
         when :SOA then [{ type: "SOA", value: "#{ rrset.soa_record.host } #{ rrset.soa_record.email } #{ rrset.soa_record.serial_number } #{ rrset.soa_record.refresh_time } #{ rrset.soa_record.retry_time } #{ rrset.soa_record.expire_time } #{ rrset.soa_record.minimum_ttl }" }]
         else []
         end
@@ -73,7 +74,8 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
     end
 
     def dnssd_to_az_name(name)
-      name.sub(Regexp.new(".#{@zone_name}"), "")
+      # we use relative names, they use relative names, hurray!
+      name
     end
 
     def dnssd_to_az_records(records)
@@ -101,7 +103,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar.priority = v[0]
                         ar.weight = v[1]
                         ar.port = v[2]
-                        ar.target = v[3]
+                        ar.target = "#{v[3]}.#{@zone_name}"
                         ar }
       when :TXT then rrset.txt_records = records.map { |r|
                         # Hack to get azure to update with blank txt records
@@ -115,7 +117,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
                         ar }
       when :CNAME then rrset.cname_record = records.map { |r|
                           ar = CnameRecord.new
-                          ar.cname = r.value
+                          ar.cname = "#{r.value}.#{@zone_name}"
                           ar }.first
       end
       @logger.debug(progname) { "-> dnssd_to_az_records(#{rrset.inspect})" }
@@ -225,7 +227,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
   def initialize(config)
     super
 
-    @zone_name = config.base_domain
+    @zone_name = base_domain.to_s
     @resource_group_name = backend_config["RESOURCE_GROUP_NAME"]
     @access_token = backend_config["ACCESS_TOKEN"]
 

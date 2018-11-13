@@ -13,6 +13,8 @@ module DDNSSD
       @logger = @config.logger
     end
 
+    # Returns DNS records with relative (partially-qualified) names.
+    # Backends are reponsible for creating fully-qualified names.
     def dns_records
       unless @container.addressable?
         @logger.debug(progname) { "Container #{@container.name} does not have IP addresses; not creating DNS records for service #{@name}" }
@@ -47,34 +49,34 @@ module DDNSSD
       "#{@container.short_id} (#{@container.name.inspect})"
     end
 
-    def host_fqdn
-      "#{@config.hostname}.#{@config.base_domain}"
+    def host_rdn
+      @config.hostname
     end
 
-    def container_fqdn
-      "#{@container.short_id}.#{host_fqdn}"
+    def container_rdn
+      "#{@container.short_id}.#{host_rdn}"
     end
 
-    def address_fqdn
-      "#{instance_v4_address.gsub('.', '-')}.#{host_fqdn}"
+    def address_rdn
+      "#{instance_v4_address.gsub('.', '-')}.#{host_rdn}"
     end
 
-    def instance_address_fqdn
+    def instance_address_rdn
       if @container.host_network
-        host_fqdn
+        host_rdn
       elsif @container.host_port_for("#{@labels["port"]}/#{protos.first}")
         if @container.host_address_for("#{@labels["port"]}/#{protos.first}")
-          address_fqdn
+          address_rdn
         else
-          host_fqdn
+          host_rdn
         end
       else
-        container_fqdn
+        container_rdn
       end
     end
 
-    def service_fqdn(proto)
-      "_#{@name}._#{proto}.#{@config.base_domain}"
+    def service_rdn(proto)
+      "_#{@name}._#{proto}"
     end
 
     def instance_v4_address
@@ -94,7 +96,7 @@ module DDNSSD
       end
     end
 
-    def srv_instance_fqdn(proto)
+    def srv_instance_rdn(proto)
       name = @labels["instance"] || @container.name
       name.force_encoding("UTF-8")
 
@@ -118,7 +120,7 @@ module DDNSSD
           "Instance name #{name.inspect} on container #{container_desc} is not valid Net-Unicode (contains ASCII control characters)."
       end
 
-      "#{name}.#{service_fqdn(proto)}"
+      "#{name}.#{service_rdn(proto)}"
     end
 
     def protos
@@ -139,7 +141,7 @@ module DDNSSD
 
     def a_records
       if !@container.host_network && instance_v4_address
-        [DDNSSD::DNSRecord.new(instance_address_fqdn, @config.record_ttl, :A, instance_v4_address)]
+        [DDNSSD::DNSRecord.new(instance_address_rdn, @config.record_ttl, :A, instance_v4_address)]
       else
         []
       end
@@ -153,7 +155,7 @@ module DDNSSD
         []
       else
 
-        [DDNSSD::DNSRecord.new(instance_address_fqdn, @config.record_ttl, :AAAA, @container.ipv6_address)]
+        [DDNSSD::DNSRecord.new(instance_address_rdn, @config.record_ttl, :AAAA, @container.ipv6_address)]
       end
     end
 
@@ -182,20 +184,20 @@ module DDNSSD
       protos.map do |proto|
         port = @container.host_port_for("#{@labels["port"]}/#{proto}") || @labels["port"]
 
-        DDNSSD::DNSRecord.new(srv_instance_fqdn(proto),
+        DDNSSD::DNSRecord.new(srv_instance_rdn(proto),
             @config.record_ttl,
             :SRV,
             priority,
             weight,
             port.to_i,
-            instance_address_fqdn
+            instance_address_rdn
         )
       end
     end
 
     def ptr_records
       protos.map do |proto|
-        DDNSSD::DNSRecord.new(service_fqdn(proto), @config.record_ttl, :PTR, srv_instance_fqdn(proto))
+        DDNSSD::DNSRecord.new(service_rdn(proto), @config.record_ttl, :PTR, srv_instance_rdn(proto))
       end
     end
 
@@ -247,13 +249,13 @@ module DDNSSD
 
     def txt_records
       protos.map do |proto|
-        DDNSSD::DNSRecord.new(srv_instance_fqdn(proto), @config.record_ttl, :TXT, *parse_tag_labels)
+        DDNSSD::DNSRecord.new(srv_instance_rdn(proto), @config.record_ttl, :TXT, *parse_tag_labels)
       end
     end
 
     def cname_records
       @labels["aliases"].to_s.split(',').map do |relrrname|
-        DDNSSD::DNSRecord.new("#{relrrname}.#{@config.base_domain}", @config.record_ttl, :CNAME, instance_address_fqdn)
+        DDNSSD::DNSRecord.new(relrrname, @config.record_ttl, :CNAME, instance_address_rdn)
       end
     end
   end

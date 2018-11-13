@@ -25,17 +25,17 @@ describe DDNSSD::Backend::Log do
 
   describe "#publish_record" do
     it "logs the publish call" do
-      expect(logger).to receive(:info) { |_, &blk| expect(blk.call).to match(/publish.*flingle.example.com/i) }
+      expect(logger).to receive(:info) { |_, &blk| expect(blk.call).to match(/publish.*flingle/i) }
 
-      backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :A, "192.0.2.42"))
+      backend.publish_record(DDNSSD::DNSRecord.new("flingle", 42, :A, "192.0.2.42"))
     end
   end
 
   describe "#suppress_record" do
     it "logs the suppress call" do
-      expect(logger).to receive(:info) { |_, &blk| expect(blk.call).to match(/suppress.*abcd1234.flingle.example.com/i) }
+      expect(logger).to receive(:info) { |_, &blk| expect(blk.call).to match(/suppress.*abcd1234.flingle/i) }
 
-      backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
+      backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42"))
     end
   end
 end

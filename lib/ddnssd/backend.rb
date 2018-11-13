@@ -6,6 +6,8 @@ module DDNSSD
   class Backend
     class InvalidRequest < DDNSSD::Error; end
 
+    PUBLISHABLE_TYPES = [:A, :AAAA, :CNAME, :SRV, :TXT, :PTR]
+
     def self.backend_name
       self.to_s.split("::").last.gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2').gsub(/([a-z\d])([A-Z])/, '\1_\2').downcase
     end
@@ -63,7 +65,7 @@ module DDNSSD
 
         case rr.type
         when :A
-          if rr.name =~ /\A(\d+-\d+-\d+-\d+\.)?[^.]+\.#{Regexp.quote(base_domain)}\z/
+          if rr.name =~ /\A(\d+-\d+-\d+-\d+\.)?[^.]+\z/
             # This record represents an IPv4 address that is (or could be) shared
             # amongst many machines; that means we can't remove it now, in case
             # it's used elsewhere.  We'll defer this for another time
@@ -112,7 +114,8 @@ module DDNSSD
     end
 
     def base_domain
-      backend_config["BASE_DOMAIN"] || @config.base_domain
+      # an absolute Name
+      Resolv::DNS::Name.create((backend_config["BASE_DOMAIN"] || @config.base_domain) + '.')
     end
   end
 end

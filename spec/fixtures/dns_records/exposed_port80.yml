@@ -1,28 +1,28 @@
-- name: asdfasdfexpo.speccy.example.com
+- name: asdfasdfexpo.speccy
   type: :A
   ttl: 60
   data:
   - 172.17.0.42
-- name: asdfasdfexpo.speccy.example.com
+- name: asdfasdfexpo.speccy
   type: :AAAA
   ttl: 60
   data:
   - 2001:db8::42
-- name: exposed80._http._tcp.example.com
+- name: exposed80._http._tcp
   type: :SRV
   ttl: 60
   data:
   - 0
   - 0
   - 80
-  - asdfasdfexpo.speccy.example.com
-- name: exposed80._http._tcp.example.com
+  - asdfasdfexpo.speccy
+- name: exposed80._http._tcp
   type: :TXT
   ttl: 60
   data:
   - ""
-- name: _http._tcp.example.com
+- name: _http._tcp
   type: :PTR
   ttl: 60
   data:
-  - exposed80._http._tcp.example.com
+  - exposed80._http._tcp

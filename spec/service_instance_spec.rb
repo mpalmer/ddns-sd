@@ -63,7 +63,7 @@ describe DDNSSD::ServiceInstance do
         end
 
         it "has a SRV record pointing to the container+exposed port" do
-          expect(result).to have_SRV_record("exposed80._http._tcp", "0 0 80 asdfasdfexpo.speccy.example.com")
+          expect(result).to have_SRV_record("exposed80._http._tcp", "0 0 80 asdfasdfexpo.speccy")
         end
 
         it "has an empty TXT record" do
@@ -71,7 +71,7 @@ describe DDNSSD::ServiceInstance do
         end
 
         it "points to the service instance" do
-          expect(result).to have_PTR_record("_http._tcp", "exposed80._http._tcp.example.com")
+          expect(result).to have_PTR_record("_http._tcp", "exposed80._http._tcp")
         end
       end
 
@@ -87,7 +87,7 @@ describe DDNSSD::ServiceInstance do
         end
 
         it "has a SRV record pointing to the container+exposed port" do
-          expect(result).to have_SRV_record("exposed80._http._tcp", "0 0 80 asdfasdfexpo.speccy.example.com")
+          expect(result).to have_SRV_record("exposed80._http._tcp", "0 0 80 asdfasdfexpo.speccy")
         end
 
         it "has an empty TXT record" do
@@ -95,7 +95,7 @@ describe DDNSSD::ServiceInstance do
         end
 
         it "points to the service instance" do
-          expect(result).to have_PTR_record("_http._tcp", "exposed80._http._tcp.example.com")
+          expect(result).to have_PTR_record("_http._tcp", "exposed80._http._tcp")
         end
       end
 
@@ -111,7 +111,7 @@ describe DDNSSD::ServiceInstance do
         end
 
         it "has a SRV record pointing to the host+published port" do
-          expect(result).to have_SRV_record("pub80._http._tcp", "0 0 8080 speccy.example.com")
+          expect(result).to have_SRV_record("pub80._http._tcp", "0 0 8080 speccy")
         end
 
         it "has an empty TXT record" do
@@ -119,7 +119,7 @@ describe DDNSSD::ServiceInstance do
         end
 
         it "points to the service instance" do
-          expect(result).to have_PTR_record("_http._tcp", "pub80._http._tcp.example.com")
+          expect(result).to have_PTR_record("_http._tcp", "pub80._http._tcp")
         end
       end
 
@@ -139,7 +139,7 @@ describe DDNSSD::ServiceInstance do
         end
 
         it "has a SRV record pointing to the host+published port" do
-          expect(result).to have_SRV_record("pub80._http._tcp", "0 0 8080 192-0-2-99.speccy.example.com")
+          expect(result).to have_SRV_record("pub80._http._tcp", "0 0 8080 192-0-2-99.speccy")
         end
 
         it "has an empty TXT record" do
@@ -147,7 +147,7 @@ describe DDNSSD::ServiceInstance do
         end
 
         it "points to the service instance" do
-          expect(result).to have_PTR_record("_http._tcp", "pub80._http._tcp.example.com")
+          expect(result).to have_PTR_record("_http._tcp", "pub80._http._tcp")
         end
       end
 
@@ -179,7 +179,7 @@ describe DDNSSD::ServiceInstance do
         let(:docker_container) { container_fixture("exposed_port80") }
 
         it "has a SRV record pointing to the container+exposed port" do
-          expect(result).to have_SRV_record("flibbety._http._tcp", "0 0 80 asdfasdfexpo.speccy.example.com")
+          expect(result).to have_SRV_record("flibbety._http._tcp", "0 0 80 asdfasdfexpo.speccy")
         end
 
         it "has an empty TXT record" do
@@ -187,7 +187,7 @@ describe DDNSSD::ServiceInstance do
         end
 
         it "points to the service instance" do
-          expect(result).to have_PTR_record("_http._tcp", "flibbety._http._tcp.example.com")
+          expect(result).to have_PTR_record("_http._tcp", "flibbety._http._tcp")
         end
       end
 
@@ -195,7 +195,7 @@ describe DDNSSD::ServiceInstance do
         let(:docker_container) { container_fixture("published_port80") }
 
         it "has a SRV record pointing to the host+published port" do
-          expect(result).to have_SRV_record("flibbety._http._tcp", "0 0 8080 speccy.example.com")
+          expect(result).to have_SRV_record("flibbety._http._tcp", "0 0 8080 speccy")
         end
 
         it "has an empty TXT record" do
@@ -203,7 +203,7 @@ describe DDNSSD::ServiceInstance do
         end
 
         it "points to the service instance" do
-          expect(result).to have_PTR_record("_http._tcp", "flibbety._http._tcp.example.com")
+          expect(result).to have_PTR_record("_http._tcp", "flibbety._http._tcp")
         end
       end
     end
@@ -266,7 +266,7 @@ describe DDNSSD::ServiceInstance do
       end
 
       it "has a _udp SRV record" do
-        expect(result).to have_SRV_record("pub80._http._udp", "0 0 8080 speccy.example.com")
+        expect(result).to have_SRV_record("pub80._http._udp", "0 0 8080 speccy")
       end
 
       it "has an empty _udp TXT record" do
@@ -274,7 +274,7 @@ describe DDNSSD::ServiceInstance do
       end
 
       it "points to the _udp service instance" do
-        expect(result).to have_PTR_record("_http._udp", "pub80._http._udp.example.com")
+        expect(result).to have_PTR_record("_http._udp", "pub80._http._udp")
       end
     end
 
@@ -289,7 +289,7 @@ describe DDNSSD::ServiceInstance do
 
       %w{_tcp _udp}.each do |proto|
         it "has a #{proto} SRV record" do
-          expect(result).to have_SRV_record("pub80._http.#{proto}", "0 0 8080 speccy.example.com")
+          expect(result).to have_SRV_record("pub80._http.#{proto}", "0 0 8080 speccy")
         end
 
         it "has an empty #{proto} TXT record" do
@@ -297,7 +297,7 @@ describe DDNSSD::ServiceInstance do
         end
 
         it "points to the #{proto} service instance" do
-          expect(result).to have_PTR_record("_http.#{proto}", "pub80._http.#{proto}.example.com")
+          expect(result).to have_PTR_record("_http.#{proto}", "pub80._http.#{proto}")
         end
       end
     end
@@ -324,7 +324,7 @@ describe DDNSSD::ServiceInstance do
       end
 
       it "has a customised SRV record" do
-        expect(result).to have_SRV_record("exposed80._http._tcp", "42 0 80 asdfasdfexpo.speccy.example.com")
+        expect(result).to have_SRV_record("exposed80._http._tcp", "42 0 80 asdfasdfexpo.speccy")
       end
     end
 
@@ -362,7 +362,7 @@ describe DDNSSD::ServiceInstance do
       end
 
       it "has a customised SRV record" do
-        expect(result).to have_SRV_record("exposed80._http._tcp", "0 42 80 asdfasdfexpo.speccy.example.com")
+        expect(result).to have_SRV_record("exposed80._http._tcp", "0 42 80 asdfasdfexpo.speccy")
       end
     end
 
@@ -560,8 +560,8 @@ describe DDNSSD::ServiceInstance do
         let(:docker_container) { container_fixture("exposed_port80") }
 
         it "creates CNAME records pointing to the container+exposed port" do
-          expect(result).to have_CNAME_record("some.thing.funny", "asdfasdfexpo.speccy.example.com")
-          expect(result).to have_CNAME_record("pgsql-master", "asdfasdfexpo.speccy.example.com")
+          expect(result).to have_CNAME_record("some.thing.funny", "asdfasdfexpo.speccy")
+          expect(result).to have_CNAME_record("pgsql-master", "asdfasdfexpo.speccy")
         end
       end
 
@@ -569,8 +569,8 @@ describe DDNSSD::ServiceInstance do
         let(:docker_container) { container_fixture("published_port80") }
 
         it "creates CNAME records pointing to the container+exposed port" do
-          expect(result).to have_CNAME_record("some.thing.funny", "speccy.example.com")
-          expect(result).to have_CNAME_record("pgsql-master", "speccy.example.com")
+          expect(result).to have_CNAME_record("some.thing.funny", "speccy")
+          expect(result).to have_CNAME_record("pgsql-master", "speccy")
         end
       end
 
@@ -582,8 +582,8 @@ describe DDNSSD::ServiceInstance do
         end
 
         it "creates CNAME records pointing to the container+exposed port" do
-          expect(result).to have_CNAME_record("some.thing.funny", "192-0-2-99.speccy.example.com")
-          expect(result).to have_CNAME_record("pgsql-master", "192-0-2-99.speccy.example.com")
+          expect(result).to have_CNAME_record("some.thing.funny", "192-0-2-99.speccy")
+          expect(result).to have_CNAME_record("pgsql-master", "192-0-2-99.speccy")
         end
       end
     end

@@ -1,18 +1,18 @@
-- name: host_port80._http._tcp.example.com
+- name: host_port80._http._tcp
   type: :SRV
   ttl: 60
   data:
   - 0
   - 0
   - 80
-  - speccy.example.com
-- name: host_port80._http._tcp.example.com
+  - speccy
+- name: host_port80._http._tcp
   type: :TXT
   ttl: 60
   data:
   - ""
-- name: _http._tcp.example.com
+- name: _http._tcp
   type: :PTR
   ttl: 60
   data:
-  - host_port80._http._tcp.example.com
+  - host_port80._http._tcp

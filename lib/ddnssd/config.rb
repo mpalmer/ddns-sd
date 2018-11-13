@@ -46,7 +46,7 @@ module DDNSSD
     def host_dns_record
       @host_dns_record ||= begin
         if @host_ip_address
-          DDNSSD::DNSRecord.new("#{@hostname}.#{@base_domain}", @record_ttl, :A, @host_ip_address)
+          DDNSSD::DNSRecord.new(@hostname, @record_ttl, :A, @host_ip_address)
         else
           nil
         end
