@@ -45,8 +45,9 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
   class RecordCache
     include Retryable
 
-    def initialize(zone_id, route53, route53_stats, logger)
-      @zone_id, @route53, @route53_stats, @logger = zone_id, route53, route53_stats, logger
+    def initialize(zone_id, route53, route53_stats, logger, base_domain)
+      @zone_id, @route53, @route53_stats, @logger, @base_domain =
+        zone_id, route53, route53_stats, logger, base_domain
 
       blank_cache
     end
@@ -79,10 +80,17 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
       end
     end
 
-    def refresh(name, type)
+    def refresh(rel_name, type)
+      name = "#{rel_name}.#{@base_domain}"
+
       res = retryable do
         @route53_stats.measure(op: "get") do
-          @route53.list_resource_record_sets(hosted_zone_id: @zone_id, start_record_name: name, start_record_type: type.to_s, max_items: 1)
+          @route53.list_resource_record_sets(
+            hosted_zone_id: @zone_id,
+            start_record_name: name,
+            start_record_type: type.to_s,
+            max_items: 1
+          )
         end
       end
 
@@ -91,7 +99,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
       if rrset
         import_rrset(rrset)
       else
-        @cache[name][type] = []
+        @cache[rel_name][type] = []
       end
     end
 
@@ -123,14 +131,16 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
     end
 
     def import_rrset(rrset)
-      @cache[rrset.name.chomp(".")][rrset.type.to_sym] = rrset.resource_records.map do |rr|
+      @cache[rrset.name.chomp(".#{@base_domain}.")][rrset.type.to_sym] = rrset.resource_records.map do |rr|
         rrdata = if rrset.type == "TXT"
           Shellwords.shellwords(rr.value)
         else
           rr.value.split(/\s+/).map { |v| v =~ /\A\d+\z/ ? v.to_i : v }
         end
 
-        DDNSSD::DNSRecord.new(rrset.name.chomp("."), rrset.ttl, rrset.type.to_sym, *rrdata)
+        DDNSSD::DNSRecord.new_relative_from_absolute(
+          @base_domain, rrset.name.chomp("."), rrset.ttl, rrset.type.to_sym, *rrdata
+        )
       end
     end
   end
@@ -150,7 +160,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
     @route53 = Aws::Route53::Client.new(region: "fml")
     @route53_stats = Frankenstein::Request.new(:ddnssd_route53, description: "route53", registry: @config.metrics_registry)
 
-    @record_cache = RecordCache.new(@zone_id, @route53, @route53_stats, @logger)
+    @record_cache = RecordCache.new(@zone_id, @route53, @route53_stats, @logger, base_domain)
   end
 
   def dns_records
@@ -354,10 +364,10 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
     {
       action: action,
       resource_record_set: {
-        name: rrset.first.name,
+        name: "#{rrset.first.name}.#{base_domain}",
         type: rrset.first.type.to_s,
         ttl: rrset.first.ttl,
-        resource_records: rrset.map { |rr| { value: rr.value } }
+        resource_records: rrset.map { |rr| { value: rr.value_absolute(base_domain) } }
       }
     }
   end

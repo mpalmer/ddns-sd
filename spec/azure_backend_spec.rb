@@ -168,7 +168,7 @@ describe DDNSSD::Backend::Azure do
                                              "properties" => { "TTL" => 42, "ARecords" => [{ "ipv4Address" => "192.0.2.42" }] }))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
-        backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :A, "192.0.2.42"))
+        backend.publish_record(DDNSSD::DNSRecord.new("flingle", 42, :A, "192.0.2.42"))
       end
     end
 
@@ -183,7 +183,7 @@ describe DDNSSD::Backend::Azure do
                                              "properties" => { "TTL" => 42, "AAAARecords" => [{ "ipv6Address" => "2001:DB8::42" }] }))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
-        backend.publish_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
+        backend.publish_record(DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::42"))
       end
     end
 
@@ -197,7 +197,7 @@ describe DDNSSD::Backend::Azure do
                                            match_azure_record("properties" => { "TTL" => 42, "CNAMERecord" => { "cname" => "pgsql.host27.example.com" } }))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
-        backend.publish_record(DDNSSD::DNSRecord.new("db.example.com", 42, :CNAME, "pgsql.host27.example.com"))
+        backend.publish_record(DDNSSD::DNSRecord.new("db", 42, :CNAME, "pgsql.host27"))
       end
     end
 
@@ -211,14 +211,14 @@ describe DDNSSD::Backend::Azure do
                                            match_azure_record("properties" => { "TTL" => 42, "TXTRecords" => [{ "value" => ["something \"funny\"", "this too"] }] }))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
-        backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, 'something "funny"', "this too"))
+        backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :TXT, 'something "funny"', "this too"))
       end
 
       it "works around an azure limitation of blank records by upserting a TXT record with a space" do
         expect(az_client.record_sets).to receive(:create_or_update).with(rg, zone, "faff._http._tcp", "TXT", match_azure_record("properties" => { "TTL" => 42, "TXTRecords" => [{ "value" => [" "] }] }))
         expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
-        backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, ""))
+        backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :TXT, ""))
       end
     end
 
@@ -235,7 +235,7 @@ describe DDNSSD::Backend::Azure do
                                              if_none_match: "*")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
-          backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+          backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22"))
         end
       end
 
@@ -243,8 +243,8 @@ describe DDNSSD::Backend::Azure do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host1.example.com"),
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host3.example.com")
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host1"),
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host3")
           )
         end
 
@@ -253,7 +253,7 @@ describe DDNSSD::Backend::Azure do
           expect(az_client.record_sets).to receive(:update).with(rg, zone, "faff._http._tcp", "SRV", anything, if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
-          backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+          backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22"))
         end
       end
 
@@ -262,9 +262,9 @@ describe DDNSSD::Backend::Azure do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host1.example.com"),
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host3.example.com"),
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com")
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host1"),
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host3"),
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22")
           )
         end
 
@@ -273,7 +273,7 @@ describe DDNSSD::Backend::Azure do
           expect(az_client.record_sets).to receive(:update).with(rg, zone, "faff._http._tcp", "SRV", anything, if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
-          backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+          backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22"))
         end
       end
 
@@ -287,7 +287,7 @@ describe DDNSSD::Backend::Azure do
 
             expect(az_client.record_sets).to receive(:update).with(rg, zone, "faff._http._tcp", "SRV", anything, if_match: "faff_etag").and_return(OpenStruct.new(etag: "other")).ordered
 
-            backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+            backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22"))
           end
         end
 
@@ -298,7 +298,7 @@ describe DDNSSD::Backend::Azure do
 
             expect(az_client.record_sets).to receive(:create_or_update).with(rg, zone, "faff._http._tcp", "SRV", anything, if_none_match: "*").and_return(OpenStruct.new(etag: "other")).ordered
 
-            backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+            backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22"))
           end
         end
 
@@ -314,7 +314,7 @@ describe DDNSSD::Backend::Azure do
 
             expect(logger).to receive(:error)
 
-            backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com"))
+            backend.publish_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22"))
           end
         end
       end
@@ -326,7 +326,7 @@ describe DDNSSD::Backend::Azure do
           expect(az_client.record_sets).to receive(:create_or_update).with(rg, zone, "_http._tcp", "PTR", anything, if_none_match: "*")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
-          backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+          backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp"))
         end
       end
 
@@ -334,8 +334,8 @@ describe DDNSSD::Backend::Azure do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "xyzzy._http._tcp.example.com"),
-            DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "argle._http._tcp.example.com")
+            DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "xyzzy._http._tcp"),
+            DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "argle._http._tcp")
           )
         end
 
@@ -344,7 +344,7 @@ describe DDNSSD::Backend::Azure do
           expect(az_client.record_sets).to receive(:update).with(rg, zone, "_http._tcp", "PTR", anything, if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
-          backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+          backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp"))
         end
       end
 
@@ -352,7 +352,7 @@ describe DDNSSD::Backend::Azure do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com")
+            DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp")
           )
         end
 
@@ -360,7 +360,7 @@ describe DDNSSD::Backend::Azure do
           expect(az_client.record_sets).to receive(:update).with(rg, zone, "_http._tcp", "PTR", anything, if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
-          backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+          backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp"))
         end
       end
 
@@ -374,7 +374,7 @@ describe DDNSSD::Backend::Azure do
 
             expect(az_client.record_sets).to receive(:update).with(rg, zone, "_http._tcp", "PTR", anything, if_match: "http_ptr_etag").and_return(OpenStruct.new(etag: "other")).ordered
 
-            backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+            backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp"))
           end
         end
 
@@ -385,7 +385,7 @@ describe DDNSSD::Backend::Azure do
 
             expect(az_client.record_sets).to receive(:create_or_update).with(rg, zone, "_http._tcp", "PTR", anything, if_none_match: "*").and_return(OpenStruct.new(etag: "other")).ordered
 
-            backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+            backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp"))
           end
         end
 
@@ -401,7 +401,7 @@ describe DDNSSD::Backend::Azure do
 
             expect(logger).to receive(:error)
 
-            backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
+            backend.publish_record(DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp"))
           end
         end
       end
@@ -421,7 +421,7 @@ describe DDNSSD::Backend::Azure do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42")
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42")
           )
         end
 
@@ -429,7 +429,7 @@ describe DDNSSD::Backend::Azure do
           expect(az_client.record_sets).to receive(:delete).with(rg, zone, "abcd1234.flingle", "A", if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42"))
         end
       end
 
@@ -437,9 +437,9 @@ describe DDNSSD::Backend::Azure do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.1"),
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"),
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.180")
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.1"),
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42"),
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.180")
           )
         end
 
@@ -449,7 +449,7 @@ describe DDNSSD::Backend::Azure do
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
           expect(az_client.record_sets).to_not receive(:delete)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42"))
         end
       end
 
@@ -458,8 +458,8 @@ describe DDNSSD::Backend::Azure do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.1"),
-            DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.180")
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.1"),
+            DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.180")
           )
         end
 
@@ -468,7 +468,7 @@ describe DDNSSD::Backend::Azure do
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
           expect(az_client.record_sets).to_not receive(:delete)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle.example.com", 42, :A, "192.0.2.42"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("abcd1234.flingle", 42, :A, "192.0.2.42"))
         end
       end
     end
@@ -478,7 +478,7 @@ describe DDNSSD::Backend::Azure do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42")
+            DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::42")
           )
         end
 
@@ -486,7 +486,7 @@ describe DDNSSD::Backend::Azure do
           expect(az_client.record_sets).to receive(:delete).with(rg, zone, "flingle", "AAAA", if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::42"))
         end
       end
 
@@ -494,9 +494,9 @@ describe DDNSSD::Backend::Azure do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::1"),
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"),
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::180")
+            DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::1"),
+            DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::42"),
+            DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::180")
           )
         end
 
@@ -506,7 +506,7 @@ describe DDNSSD::Backend::Azure do
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
           expect(az_client.record_sets).to_not receive(:delete)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::42"))
         end
       end
 
@@ -514,8 +514,8 @@ describe DDNSSD::Backend::Azure do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::1"),
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::180")
+            DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::1"),
+            DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::180")
           )
         end
 
@@ -525,7 +525,7 @@ describe DDNSSD::Backend::Azure do
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
           expect(az_client.record_sets).to_not receive(:delete)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::42"))
         end
       end
     end
@@ -535,7 +535,7 @@ describe DDNSSD::Backend::Azure do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host42.example.com")
+            DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host42")
           )
         end
 
@@ -543,7 +543,7 @@ describe DDNSSD::Backend::Azure do
           expect(az_client.record_sets).to receive(:delete).with(rg, zone, "flingle", "CNAME", if_match: "etag")
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host42.example.com"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host42"))
         end
       end
 
@@ -551,9 +551,9 @@ describe DDNSSD::Backend::Azure do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host1.example.com"),
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host42.example.com"),
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host180.example.com")
+            DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host1"),
+            DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host42"),
+            DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host180")
           )
         end
 
@@ -563,7 +563,7 @@ describe DDNSSD::Backend::Azure do
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
           expect(az_client.record_sets).to_not receive(:delete)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host42.example.com"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host42"))
         end
       end
 
@@ -571,8 +571,8 @@ describe DDNSSD::Backend::Azure do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host1.example.com"),
-            DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host180.example.com")
+            DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host1"),
+            DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host180")
           )
         end
 
@@ -581,7 +581,7 @@ describe DDNSSD::Backend::Azure do
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
           expect(az_client.record_sets).to_not receive(:delete)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("flingle.example.com", 42, :CNAME, "host42.example.com"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("flingle", 42, :CNAME, "host42"))
         end
       end
     end
@@ -591,8 +591,8 @@ describe DDNSSD::Backend::Azure do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host1.example.com"),
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host2.example.com")
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host1"),
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host2")
           )
         end
 
@@ -602,7 +602,7 @@ describe DDNSSD::Backend::Azure do
           expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
           expect(az_client.record_sets).to_not receive(:delete)
 
-          backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host2.example.com"))
+          backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host2"))
         end
 
       end
@@ -611,11 +611,11 @@ describe DDNSSD::Backend::Azure do
         before(:each) do
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host1.example.com")
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host1")
           )
           backend.instance_variable_get(:@record_cache).set(
             "etag",
-            DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, "something funny")
+            DDNSSD::DNSRecord.new("faff._http._tcp", 42, :TXT, "something funny")
           )
         end
 
@@ -623,7 +623,7 @@ describe DDNSSD::Backend::Azure do
           before(:each) do
             backend.instance_variable_get(:@record_cache).set(
               "etag",
-              DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com")
+              DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp")
             )
           end
 
@@ -633,7 +633,7 @@ describe DDNSSD::Backend::Azure do
             expect(az_client.record_sets).to receive(:delete).with(rg, zone, "faff._http._tcp", "TXT", if_match: "etag")
             expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
 
-            backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host1.example.com"))
+            backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host1"))
           end
         end
 
@@ -641,8 +641,8 @@ describe DDNSSD::Backend::Azure do
           before(:each) do
             backend.instance_variable_get(:@record_cache).set(
               "etag",
-              DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "blargh._http._tcp.example.com"),
-              DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com")
+              DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "blargh._http._tcp"),
+              DDNSSD::DNSRecord.new("_http._tcp", 42, :PTR, "faff._http._tcp")
             )
           end
 
@@ -653,7 +653,7 @@ describe DDNSSD::Backend::Azure do
             expect(az_client.record_sets).to_not receive(:list_resource_record_sets)
             expect(az_client.record_sets).to_not receive(:delete).with(rg, zone, "_http._tcp", "PTR", if_match: "etag")
 
-            backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host1.example.com"))
+            backend.suppress_record(DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host1"))
           end
         end
       end
@@ -661,13 +661,13 @@ describe DDNSSD::Backend::Azure do
 
     context "with a TXT record" do
       it "logs an error" do
-        expect { backend.suppress_record(DDNSSD::DNSRecord.new("x.example.com", 60, :TXT, "")) }.to raise_error(DDNSSD::Backend::InvalidRequest)
+        expect { backend.suppress_record(DDNSSD::DNSRecord.new("x", 60, :TXT, "")) }.to raise_error(DDNSSD::Backend::InvalidRequest)
       end
     end
 
     context "with a PTR record" do
       it "logs an error" do
-        expect { backend.suppress_record(DDNSSD::DNSRecord.new("x.example.com", 60, :PTR, "faff.example.com")) }.to raise_error(DDNSSD::Backend::InvalidRequest)
+        expect { backend.suppress_record(DDNSSD::DNSRecord.new("x", 60, :PTR, "faff")) }.to raise_error(DDNSSD::Backend::InvalidRequest)
       end
     end
 

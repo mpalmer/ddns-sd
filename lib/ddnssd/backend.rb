@@ -63,7 +63,7 @@ module DDNSSD
 
         case rr.type
         when :A
-          if rr.name =~ /\A(\d+-\d+-\d+-\d+\.)?[^.]+\.#{Regexp.quote(base_domain)}\z/
+          if rr.name =~ /\A(\d+-\d+-\d+-\d+\.)?[^.]+\z/
             # This record represents an IPv4 address that is (or could be) shared
             # amongst many machines; that means we can't remove it now, in case
             # it's used elsewhere.  We'll defer this for another time

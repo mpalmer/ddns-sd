@@ -1,13 +1,13 @@
-- name: zomg.someone-else.example.com
+- name: zomg.someone-else
   type: :A
   ttl: 60
   data:
   - 192.0.2.123
-- name: pub80._http._tcp.example.com
+- name: pub80._http._tcp
   type: :SRV
   ttl: 60
   data:
   - 0
   - 0
   - 8080
-  - zomg.someone-else.example.com
+  - zomg.someone-else

@@ -104,7 +104,7 @@ describe DDNSSD::System do
       end
 
       it "publishes the host's IP address" do
-        expect(mock_backend).to receive(:publish_record).with(DDNSSD::DNSRecord.new("speccy.example.com", 60, :A, "192.0.2.42"))
+        expect(mock_backend).to receive(:publish_record).with(DDNSSD::DNSRecord.new("speccy", 60, :A, "192.0.2.42"))
 
         system.run
       end
@@ -113,8 +113,8 @@ describe DDNSSD::System do
         let(:env) { base_env.merge("DDNSSD_BACKEND" => "test_queue,log") }
 
         it "publishes the host's IP address to all backends" do
-          expect(mock_backend).to receive(:publish_record).with(DDNSSD::DNSRecord.new("speccy.example.com", 60, :A, "192.0.2.42"))
-          expect(mock_log_backend).to receive(:publish_record).with(DDNSSD::DNSRecord.new("speccy.example.com", 60, :A, "192.0.2.42"))
+          expect(mock_backend).to receive(:publish_record).with(DDNSSD::DNSRecord.new("speccy", 60, :A, "192.0.2.42"))
+          expect(mock_log_backend).to receive(:publish_record).with(DDNSSD::DNSRecord.new("speccy", 60, :A, "192.0.2.42"))
 
           system.run
         end
@@ -421,10 +421,10 @@ describe DDNSSD::System do
 
         expect(mock_backend)
           .to receive(:suppress_record)
-          .with(eq(DDNSSD::DNSRecord.new("pub80._http._tcp.example.com", 60, :SRV, 0, 0, 8080, "speccy.example.com")))
+          .with(eq(DDNSSD::DNSRecord.new("pub80._http._tcp", 60, :SRV, 0, 0, 8080, "speccy")))
         expect(mock_backend)
           .to receive(:publish_record)
-          .with(eq(DDNSSD::DNSRecord.new("pub80._http._tcp.example.com", 60, :SRV, 0, 0, 1337, "speccy.example.com")))
+          .with(eq(DDNSSD::DNSRecord.new("pub80._http._tcp", 60, :SRV, 0, 0, 1337, "speccy")))
 
         system.send(:reconcile_containers, mock_backend)
       end
