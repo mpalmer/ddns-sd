@@ -9,7 +9,7 @@ describe DDNSSD::PowerDNS::ResourceRecordStore do
 
   let(:config) { DDNSSD::Config.new(power_dns_test_config, logger: logger) }
   let(:backend) { DDNSSD::Backend::PowerDNS.new(config) }
-  let(:rr_store) { DDNSSD::PowerDNS::ResourceRecordStore.new(backend, logger) }
+  let(:rr_store) { DDNSSD::PowerDNS::ResourceRecordStore.new(backend, 'example.com', logger) }
   let(:a_record) { DDNSSD::DNSRecord.new('power.sd.example.com', 42, :A, '192.0.2.42') }
 
   describe '#add' do

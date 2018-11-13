@@ -12,7 +12,7 @@ describe DDNSSD::Backend::PowerDNS do
   let(:env) { base_env }
   let(:config) { DDNSSD::Config.new(env, logger: logger) }
   let(:backend) { DDNSSD::Backend::PowerDNS.new(config) }
-  let(:rr_store) { DDNSSD::PowerDNS::ResourceRecordStore.new(backend, logger) }
+  let(:rr_store) { DDNSSD::PowerDNS::ResourceRecordStore.new(backend, 'example.com', logger) }
 
   describe '.new' do
     %w(PG_DBNAME PG_USER PG_PASSWORD).each do |config_var|
@@ -147,7 +147,7 @@ describe DDNSSD::Backend::PowerDNS do
     end
 
     context "with an A record" do
-      let(:dns_record) { DDNSSD::DNSRecord.new("flingle.example.com", 42, :A, "192.0.2.42") }
+      let(:dns_record) { DDNSSD::DNSRecord.new("flingle", 42, :A, "192.0.2.42") }
 
       it "upserts the A record" do
         backend.publish_record(dns_record)
@@ -190,7 +190,7 @@ describe DDNSSD::Backend::PowerDNS do
 
     context "with an AAAA record" do
       it "upserts the AAAA record" do
-        dns_record = DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42")
+        dns_record = DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::42")
         backend.publish_record(dns_record)
         records = rr_store.lookup(name: "flingle.example.com")
         expect(records.size).to eq(1)
@@ -204,7 +204,7 @@ describe DDNSSD::Backend::PowerDNS do
 
     context "with a CNAME record" do
       it "upserts the CNAME record" do
-        dns_record = DDNSSD::DNSRecord.new("db.example.com", 42, :CNAME, "pgsql.host27.example.com")
+        dns_record = DDNSSD::DNSRecord.new("db", 42, :CNAME, "pgsql.host27")
         backend.publish_record(dns_record)
         records = rr_store.lookup(name: "db.example.com")
         expect(records.size).to eq(1)
@@ -212,13 +212,13 @@ describe DDNSSD::Backend::PowerDNS do
         expect(new_record).to_not be_nil
         expect(new_record.ttl).to eq(42)
         expect(new_record.type).to eq('CNAME')
-        expect(new_record.content).to eq(dns_record.data.name)
+        expect(new_record.content).to eq("pgsql.host27.example.com")
       end
     end
 
     context "with a TXT record" do
       it "upserts the TXT record" do
-        dns_record = DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, 'something "funny"', "this too")
+        dns_record = DDNSSD::DNSRecord.new("faff._http._tcp", 42, :TXT, 'something "funny"', "this too")
         backend.publish_record(dns_record)
         records = rr_store.lookup(name: "faff._http._tcp.example.com")
         expect(records.size).to eq(1)
@@ -232,7 +232,7 @@ describe DDNSSD::Backend::PowerDNS do
 
     context "with a SRV record" do
       let(:dns_record) {
-        DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 80, "faff.host22.example.com")
+        DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 80, "faff.host22")
       }
 
       context "no existing recordset" do
@@ -269,14 +269,14 @@ describe DDNSSD::Backend::PowerDNS do
           expect(records.map(&:content)).to contain_exactly(
             '0 0 80 faff.host1.example.com',
             '0 0 8080 host3.example.com',
-            dns_record.value
+            '0 0 80 faff.host22.example.com'
           )
         end
 
         it 'does nothing when the record already exists' do
           allow(logger).to receive(:warn).with(instance_of(String))
 
-          existing = DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :SRV, 0, 0, 8080, "host3.example.com")
+          existing = DDNSSD::DNSRecord.new("faff._http._tcp", 42, :SRV, 0, 0, 8080, "host3")
 
           backend.publish_record(existing)
 
@@ -294,7 +294,7 @@ describe DDNSSD::Backend::PowerDNS do
 
       let(:dns_record) do
         DDNSSD::DNSRecord.new(
-          '_http._tcp.example.com', 42, :PTR, 'faff._http._tcp.example.com'
+          '_http._tcp', 42, :PTR, 'faff._http._tcp'
         )
       end
 
@@ -312,8 +312,8 @@ describe DDNSSD::Backend::PowerDNS do
 
       context 'with existing records for the name/type' do
         before do
-          ['xyzzy._http._tcp.example.com', 'argle._http._tcp.example.com'].each do |value|
-            rr_store.add(DDNSSD::DNSRecord.new('_http._tcp.example.com', 42, :PTR, value))
+          ['xyzzy._http._tcp', 'argle._http._tcp'].each do |value|
+            rr_store.add(DDNSSD::DNSRecord.new('_http._tcp.example.com', 42, :PTR, "#{value}.example.com"))
           end
         end
 
@@ -363,7 +363,7 @@ describe DDNSSD::Backend::PowerDNS do
 
     context 'with an A record' do
       let(:dns_record) {
-        DDNSSD::DNSRecord.new('abcd1234.flingle.example.com', 42, :A, '192.0.2.42')
+        DDNSSD::DNSRecord.new('abcd1234.flingle', 42, :A, '192.0.2.42')
       }
 
       context 'with no other records in the set' do
@@ -417,7 +417,7 @@ describe DDNSSD::Backend::PowerDNS do
 
     context 'with an AAAA record' do
       let(:dns_record) {
-        DDNSSD::DNSRecord.new('flingle.example.com', 42, :AAAA, '2001:db8::42')
+        DDNSSD::DNSRecord.new('flingle', 42, :AAAA, '2001:db8::42')
       }
 
       context 'with no other records in the set' do
@@ -465,7 +465,7 @@ describe DDNSSD::Backend::PowerDNS do
 
     context 'with a CNAME record' do
       let(:dns_record) {
-        DDNSSD::DNSRecord.new('flingle.example.com', 42, :CNAME, 'host42.example.com')
+        DDNSSD::DNSRecord.new('flingle', 42, :CNAME, 'host42')
       }
 
       context 'with no other records in the set' do
@@ -525,7 +525,7 @@ describe DDNSSD::Backend::PowerDNS do
           allow(logger).to receive(:warn).with(instance_of(String))
 
           backend.suppress_record(
-            DDNSSD::DNSRecord.new('faff._http._tcp.example.com', 42, :SRV, 0, 0, 8080, 'host2.example.com')
+            DDNSSD::DNSRecord.new('faff._http._tcp', 42, :SRV, 0, 0, 8080, 'host2')
           )
 
           records = rr_store.lookup(type: :SRV, name: 'faff._http._tcp.example.com')
@@ -537,7 +537,7 @@ describe DDNSSD::Backend::PowerDNS do
           allow(logger).to receive(:warn).with(instance_of(String))
 
           backend.suppress_record(
-            DDNSSD::DNSRecord.new('faff._http._tcp.example.com', 42, :SRV, 0, 0, 80, 'host3.example.com')
+            DDNSSD::DNSRecord.new('faff._http._tcp', 42, :SRV, 0, 0, 80, 'host3')
           )
 
           records = rr_store.lookup(type: :SRV, name: 'faff._http._tcp.example.com')
@@ -553,7 +553,7 @@ describe DDNSSD::Backend::PowerDNS do
 
           it 'should only delete the SRV record' do
             backend.suppress_record(
-              DDNSSD::DNSRecord.new('faff._http._tcp.example.com', 42, :SRV, 0, 0, 8080, 'host2.example.com')
+              DDNSSD::DNSRecord.new('faff._http._tcp', 42, :SRV, 0, 0, 8080, 'host2')
             )
 
             records = rr_store.lookup(type: :SRV, name: 'faff._http._tcp.example.com')
@@ -571,11 +571,11 @@ describe DDNSSD::Backend::PowerDNS do
 
       context 'with no other SRV records present' do
         let(:srv_record) {
-          DDNSSD::DNSRecord.new('faff._http._tcp.example.com', 42, :SRV, 0, 0, 80, 'host1.example.com')
+          DDNSSD::DNSRecord.new('faff._http._tcp', 42, :SRV, 0, 0, 80, 'host1')
         }
 
         before do
-          rr_store.add(srv_record)
+          rr_store.add(DDNSSD::DNSRecord.new('faff._http._tcp.example.com', 42, :SRV, 0, 0, 80, 'host1.example.com'))
           rr_store.add(DDNSSD::DNSRecord.new('faff._http._tcp.example.com', 42, :TXT, 'wrecka stow'))
           rr_store.add(DDNSSD::DNSRecord.new("_http._tcp.example.com", 42, :PTR, "faff._http._tcp.example.com"))
         end
@@ -591,7 +591,7 @@ describe DDNSSD::Backend::PowerDNS do
 
           it 'can rollback on exceptions' do
             allow_any_instance_of(DDNSSD::PowerDNS::ResourceRecordStore).to receive(:remove_with).and_wrap_original { |m, *args| m.call(*args) }
-            allow_any_instance_of(DDNSSD::PowerDNS::ResourceRecordStore).to receive(:remove_with).with(type: :TXT, name: srv_record.name).and_raise('Oopsie')
+            allow_any_instance_of(DDNSSD::PowerDNS::ResourceRecordStore).to receive(:remove_with).with(type: :TXT, name: "#{srv_record.name}.example.com").and_raise('Oopsie')
 
             expect(logger).to receive(:error).with(instance_of(String))
             expect { backend.suppress_record(srv_record) }.to_not raise_error
