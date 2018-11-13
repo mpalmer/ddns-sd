@@ -16,8 +16,12 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
 
   class PGServerNotFound < DDNSSD::Error; end
 
+  attr_reader :base_domain
+
   def initialize(config)
     super
+
+    @base_domain = config.base_domain
 
     %w(PG_DBNAME PG_USER PG_PASSWORD).each do |env_var|
       if (backend_config[env_var] || '').empty?
@@ -178,7 +182,7 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
   private
 
   def progname
-    @logger_progname ||= "#{self.class.name}(#{base_domain})"
+    @logger_progname ||= "#{self.class.name}(#{@base_domain})"
   end
 
   def resource_record_store
