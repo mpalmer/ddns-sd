@@ -86,24 +86,56 @@ describe DDNSSD::Backend::PowerDNS do
       expect(backend.dns_records.any? { |rr| rr.type == :A }).to be(true)
     end
 
+    it "A records are relative" do
+      expect(backend.dns_records.find { |rr| rr.type == :A }.name).to eq('abcd1234.flingle')
+    end
+
     it "returns AAAA records" do
       expect(backend.dns_records.any? { |rr| rr.type == :AAAA }).to be(true)
+    end
+
+    it "AAAA records are relative" do
+      expect(backend.dns_records.find { |rr| rr.type == :AAAA }.name).to eq('flingle6')
     end
 
     it "returns CNAME records" do
       expect(backend.dns_records.any? { |rr| rr.type == :CNAME }).to be(true)
     end
 
+    it "CNAME records are relative" do
+      rr = backend.dns_records.find { |rr| rr.type == :CNAME }
+      expect(rr.name).to eq('flinglec')
+      expect(rr.data.name).to eq('host42')
+    end
+
     it "returns SRV records" do
       expect(backend.dns_records.any? { |rr| rr.type == :SRV }).to be(true)
+    end
+
+    it "SRV records are relative" do
+      records = backend.dns_records.select { |rr| rr.type == :SRV }
+      records.each do |rr|
+        expect(rr.name).to eq('faff._http._tcp')
+        expect(rr.data.target.to_s.end_with?('.example.com')).to eq(false)
+      end
     end
 
     it "returns TXT records" do
       expect(backend.dns_records.any? { |rr| rr.type == :TXT }).to be(true)
     end
 
+    it "A records are relative" do
+      expect(backend.dns_records.find { |rr| rr.type == :TXT }.name).to eq('faff._http._tcp')
+    end
+
     it "returns PTR records" do
       expect(backend.dns_records.any? { |rr| rr.type == :PTR }).to be(true)
+    end
+
+    it "PTR records are relative" do
+      rr = backend.dns_records.find { |rr| rr.type == :PTR }
+      expect(rr.name).to eq('_http._tcp')
+      expect(rr.data.name).to eq('faff._http._tcp')
     end
 
     it "does not return SOA records" do

@@ -19,10 +19,10 @@ pdns = DDNSSD::Backend::PowerDNS.new(config)
 r53_records = r53.dns_records
 pdns_records = pdns.dns_records
 
-r53_records.select! { |rr| rr.name =~ /\.#{Regexp.escape(r53.base_domain)}\z/ }
-if pdns.base_domain.end_with?(r53.base_domain)
-  r53_records.reject! { |rr| rr.name =~ /\.#{Regexp.escape(pdns.base_domain)}\z/ }
-end
+# r53_records.select! { |rr| rr.name =~ /\.#{Regexp.escape(r53.base_domain)}\z/ }
+# if pdns.base_domain.end_with?(r53.base_domain)
+#   r53_records.reject! { |rr| rr.name =~ /\.#{Regexp.escape(pdns.base_domain)}\z/ }
+# end
 
 puts "Route 53:  #{r53_records.size} records"
 puts "Power DNS: #{pdns_records.size} records"
@@ -31,28 +31,13 @@ def print_rr(rr)
   "#{rr.name} #{rr.type} #{rr.ttl} #{rr.value}"
 end
 
-def compare(list1, list2, base1, base2, list2_name)
+def compare(list1, list2, list2_name)
   diff = 0
 
-  same_base_domain = (base1 == base2)
-  b1regex = /\.#{Regexp.escape(base1)}\z/
-  b2regex = /\.#{Regexp.escape(base2)}\z/
-
   list1.each do |rr|
-    found = if same_base_domain
-      list2.include?(rr)
-    else
-      list2.any? do |otherr|
-        rr.type == otherr.type &&
-          rr.ttl == otherr.ttl &&
-          rr.name.gsub(b1regex, '') == otherr.name.gsub(b2regex, '') &&
-          rr.value.gsub(b1regex, '') == otherr.value.gsub(b2regex, '')
-      end
-    end
-
-    unless found
+    unless list2.include?(rr)
       diff += 1
-      puts "missing equivalent record in  #{list2_name}: #{print_rr(rr)}"
+      puts "missing record in  #{list2_name}: #{print_rr(rr)}"
     end
   end
 
@@ -63,10 +48,10 @@ def compare(list1, list2, base1, base2, list2_name)
   diff
 end
 
-diff = compare(r53_records, pdns_records, r53.base_domain, pdns.base_domain, 'Power DNS')
+diff = compare(r53_records, pdns_records, 'Power DNS')
 
-exit 0 if diff == 0 && r53_records.size == pdns_records.size
-
-diff = compare(pdns_records, r53_records, pdns.base_domain, r53.base_domain, 'Route 53')
+unless diff == 0 && r53_records.size == pdns_records.size
+  compare(pdns_records, r53_records, 'Route 53')
+end
 
 puts 'Done', ''

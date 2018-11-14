@@ -98,7 +98,13 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
         rr.content.split(/\s+/).map { |v| v =~ /\A\d+\z/ ? v.to_i : v }
       end
 
-      DDNSSD::DNSRecord.new(rr.name.chomp('.'), rr.ttl, rr.type.to_sym, *rrdata)
+      DDNSSD::DNSRecord.new_relative_from_absolute(
+        base_domain,
+        rr.name.chomp('.'),
+        rr.ttl,
+        rr.type.to_sym,
+        *rrdata
+      )
     end
   end
 
