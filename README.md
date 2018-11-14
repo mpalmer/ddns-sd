@@ -1,10 +1,10 @@
 Docker DNS-SD (ddns-sd) is a tool for publishing service information
 gathered from Docker containers using the [DNS-Based Service Discovery
-(DNS-SD) standard](https://tools.ietf.org/html/rfc67631).  DNS-SD is a
+(DNS-SD) standard](https://tools.ietf.org/html/rfc6763).  DNS-SD is a
 particular "pattern" of standard DNS records (`PTR`, `SRV`, and `TXT`
 records) that allow for browsing and querying services on a network.  Whilst
 it is often used in concert with [Multicast DNS
-(mDNS)](https://tools.ietf.org/html/rfc67621), it works just as well with
+(mDNS)](https://tools.ietf.org/html/rfc6762), it works just as well with
 regular DNS services, and that is how it is usually used in a Docker-based
 system.
 
