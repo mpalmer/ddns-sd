@@ -98,20 +98,21 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
         rr.content.split(/\s+/).map { |v| v =~ /\A\d+\z/ ? v.to_i : v }
       end
 
-      DDNSSD::DNSRecord.new_relative_from_absolute(
-        base_domain,
-        rr.name.chomp('.'),
-        rr.ttl,
-        rr.type.to_sym,
-        *rrdata
-      )
+      dns_record = DDNSSD::DNSRecord.new("#{rr.name}.", rr.ttl, rr.type.to_sym, *rrdata)
+
+      if DDNSSD::Backend::PUBLISHABLE_TYPES.include?(dns_record.type)
+        dns_record.to_relative(base_domain)
+      else
+        # import SOA and others as is
+        dns_record
+      end
     end
   end
 
   def set_record(rr)
     @logger.debug(progname) { "-> set_record(#{rr.inspect})" }
     @stats.measure(op: "add") do
-      retryable { resource_record_store.add(absolute(rr)) }
+      retryable { resource_record_store.add(rr.to_absolute(base_domain)) }
     end
     @logger.debug(progname) { "<- set_record(#{rr.inspect})" }
   end
@@ -119,7 +120,7 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
   def add_record(rr)
     @logger.debug(progname) { "-> add_record(#{rr.inspect})" }
     @stats.measure(op: "add") do
-      retryable { resource_record_store.add(absolute(rr)) }
+      retryable { resource_record_store.add(rr.to_absolute(base_domain)) }
     end
     @logger.debug(progname) { "<- add_record(#{rr.inspect})" }
   end
@@ -127,15 +128,15 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
   def remove_record(rr)
     @logger.debug(progname) { "-> remove_record(#{rr.inspect})" }
     @stats.measure(op: "remove") do
-      retryable { resource_record_store.remove(absolute(rr)) }
+      retryable { resource_record_store.remove(rr.to_absolute(base_domain)) }
     end
     @logger.debug(progname) { "<- remove_record(#{rr.inspect})" }
   end
 
   def remove_srv_record(rel_srv_record)
-    @logger.debug(progname) { "-> remove_srv_record(#{srv_record.inspect})" }
+    @logger.debug(progname) { "-> remove_srv_record(#{rel_srv_record.inspect})" }
 
-    srv_record = absolute(rel_srv_record)
+    srv_record = rel_srv_record.to_absolute(base_domain)
 
     @stats.measure(op: "remove_srv") do
       retryable do
@@ -180,7 +181,7 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
       end # retryable
     end
 
-    @logger.debug(progname) { "<- remove_srv_record(#{srv_record.inspect})" }
+    @logger.debug(progname) { "<- remove_srv_record(#{rel_srv_record.inspect})" }
   end
 
   private
@@ -191,11 +192,7 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
 
   def resource_record_store
     @resource_record_store ||=
-      DDNSSD::PowerDNS::ResourceRecordStore.new(self, base_domain, @logger)
-  end
-
-  def absolute(rr)
-    DDNSSD::DNSRecord.new_absolute_from_relative(base_domain, rr)
+      DDNSSD::PowerDNS::ResourceRecordStore.new(self, base_domain.to_s, @logger)
   end
 
   def next_timeout(prev_timeout = nil)

@@ -105,7 +105,7 @@ describe DDNSSD::Backend::PowerDNS do
     it "CNAME records are relative" do
       rr = backend.dns_records.find { |rr| rr.type == :CNAME }
       expect(rr.name).to eq('flinglec')
-      expect(rr.data.name).to eq('host42')
+      expect(rr.data.name.to_s).to eq('host42')
     end
 
     it "returns SRV records" do
@@ -135,7 +135,7 @@ describe DDNSSD::Backend::PowerDNS do
     it "PTR records are relative" do
       rr = backend.dns_records.find { |rr| rr.type == :PTR }
       expect(rr.name).to eq('_http._tcp')
-      expect(rr.data.name).to eq('faff._http._tcp')
+      expect(rr.data.name.to_s).to eq('faff._http._tcp')
     end
 
     it "does not return SOA records" do
