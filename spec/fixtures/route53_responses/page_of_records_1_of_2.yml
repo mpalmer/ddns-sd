@@ -14,7 +14,7 @@
   :resource_records:
   - :value: ns1.example.com.
   - :value: ns2.example.com.
-- :name: foo.example.com
+- :name: foo.example.com.
   :type: A
   :ttl: 60
   :resource_records:

@@ -227,7 +227,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
   def initialize(config)
     super
 
-    @zone_name = base_domain
+    @zone_name = base_domain.to_s
     @resource_group_name = backend_config["RESOURCE_GROUP_NAME"]
     @access_token = backend_config["ACCESS_TOKEN"]
 
