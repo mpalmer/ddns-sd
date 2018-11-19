@@ -1,7 +1,12 @@
 require 'resolv'
+require 'freedom_patches/dns_name'
+require 'ddnssd/error'
 
 module DDNSSD
   class DNSRecord
+
+    class InvalidStateError < DDNSSD::Error; end
+
     attr_reader :ttl, :type, :data
 
     def initialize(name, ttl, type, *data)
@@ -14,23 +19,28 @@ module DDNSSD
       @ttl, @type = ttl, type
 
       puts "#{name.inspect}, #{ttl.inspect}, #{type.inspect}, #{data.inspect}" if data.empty?
-      @data = Resolv::DNS::Resource::IN.const_get(type).new(*data)
-    end
 
-    def self.new_relative_from_absolute(base_domain, name, ttl, type, *data)
-      s = ".#{base_domain}"
-
-      rel_data =
+      data_class = Resolv::DNS::Resource::IN.const_get(type)
+      @data = if data[0]&.is_a?(data_class)
+        data[0]
+      else
+        # ensure all names in the record are either absolute or relative
         case type
         when :PTR, :CNAME
-          [data[0].chomp(s)]
+          data_class.new(
+            Resolv::DNS::Name.create(
+              @name.absolute? && !absolute_name?(data[0]) ? "#{data[0]}." : data[0]
+            )
+          )
         when :SRV
-          data[0, 3] + [data[3].chomp(s)]
+          data_class.new(
+            *data[0, 3],
+            @name.absolute? && !absolute_name?(data[3]) ? "#{data[3]}." : data[3]
+          )
         else
-          data
+          data_class.new(*data)
         end
-
-      new(name.chomp(s), ttl, type, *rel_data)
+      end
     end
 
     def self.new_absolute_from_relative(base_domain, rr)
@@ -72,11 +82,15 @@ module DDNSSD
       when :TXT
         @data.strings.map { |s| '"' + s.gsub('"', '\"') + '"' }.join(" ")
       when :SRV
-        "#{@data.priority} #{@data.weight} #{@data.port} #{@data.target}"
+        "#{@data.priority} #{@data.weight} #{@data.port} #{@data.target.to_s}"
       else
         raise RuntimeError,
           "Unknown RR type #{@type.inspect}, can't convert to value"
       end
+    end
+
+    def absolute?
+      @name.absolute?
     end
 
     def value_absolute(base_domain)
@@ -86,6 +100,42 @@ module DDNSSD
       else
         value
       end
+    end
+
+    def to_absolute(base_domain)
+      raise InvalidStateError.new('Record is already absolute!') if absolute?
+
+      abs_data =
+        case type
+        when :PTR, :CNAME
+          [data.name + base_domain]
+        when :SRV
+          [data.priority, data.weight, data.port, data.target + base_domain]
+        when :A, :AAAA, :TXT
+          [data]
+        else
+          raise RuntimeError, "Unknown RR type #{@type.inspect}, can't convert to absolute"
+        end
+
+      self.class.new(@name + base_domain, @ttl, @type, *abs_data)
+    end
+
+    def to_relative(base_domain)
+      raise InvalidStateError.new('Record is already relative!') unless absolute?
+
+      rel_data =
+        case type
+        when :PTR, :CNAME
+          [data.name - base_domain]
+        when :SRV
+          [data.priority, data.weight, data.port, data.target - base_domain]
+        when :A, :AAAA, :TXT
+          [data]
+        else
+          raise RuntimeError, "Unknown RR type #{@type.inspect}, can't convert to relative"
+        end
+
+      self.class.new(@name - base_domain, @ttl, @type, *rel_data)
     end
 
     def ==(other)
@@ -98,6 +148,16 @@ module DDNSSD
 
     def hash
       @name.hash ^ @ttl.hash ^ @data.hash
+    end
+
+    private
+
+    def absolute_name?(n)
+      if n.is_a?(Resolv::DNS::Name)
+        n.absolute?
+      else
+        n.to_s.end_with?('.')
+      end
     end
   end
 end

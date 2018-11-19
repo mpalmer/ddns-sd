@@ -49,33 +49,33 @@ module DDNSSD
       "#{@container.short_id} (#{@container.name.inspect})"
     end
 
-    def host_pqdn
+    def host_rdn
       @config.hostname
     end
 
-    def container_pqdn
-      "#{@container.short_id}.#{host_pqdn}" # actually a relative name
+    def container_rdn
+      "#{@container.short_id}.#{host_rdn}"
     end
 
-    def address_pqdn
-      "#{instance_v4_address.gsub('.', '-')}.#{host_pqdn}"
+    def address_rdn
+      "#{instance_v4_address.gsub('.', '-')}.#{host_rdn}"
     end
 
-    def instance_address_pqdn
+    def instance_address_rdn
       if @container.host_network
-        host_pqdn
+        host_rdn
       elsif @container.host_port_for("#{@labels["port"]}/#{protos.first}")
         if @container.host_address_for("#{@labels["port"]}/#{protos.first}")
-          address_pqdn
+          address_rdn
         else
-          host_pqdn
+          host_rdn
         end
       else
-        container_pqdn
+        container_rdn
       end
     end
 
-    def service_pqdn(proto)
+    def service_rdn(proto)
       "_#{@name}._#{proto}"
     end
 
@@ -96,7 +96,7 @@ module DDNSSD
       end
     end
 
-    def srv_instance_pqdn(proto)
+    def srv_instance_rdn(proto)
       name = @labels["instance"] || @container.name
       name.force_encoding("UTF-8")
 
@@ -120,7 +120,7 @@ module DDNSSD
           "Instance name #{name.inspect} on container #{container_desc} is not valid Net-Unicode (contains ASCII control characters)."
       end
 
-      "#{name}.#{service_pqdn(proto)}"
+      "#{name}.#{service_rdn(proto)}"
     end
 
     def protos
@@ -141,7 +141,7 @@ module DDNSSD
 
     def a_records
       if !@container.host_network && instance_v4_address
-        [DDNSSD::DNSRecord.new(instance_address_pqdn, @config.record_ttl, :A, instance_v4_address)]
+        [DDNSSD::DNSRecord.new(instance_address_rdn, @config.record_ttl, :A, instance_v4_address)]
       else
         []
       end
@@ -155,7 +155,7 @@ module DDNSSD
         []
       else
 
-        [DDNSSD::DNSRecord.new(instance_address_pqdn, @config.record_ttl, :AAAA, @container.ipv6_address)]
+        [DDNSSD::DNSRecord.new(instance_address_rdn, @config.record_ttl, :AAAA, @container.ipv6_address)]
       end
     end
 
@@ -184,20 +184,20 @@ module DDNSSD
       protos.map do |proto|
         port = @container.host_port_for("#{@labels["port"]}/#{proto}") || @labels["port"]
 
-        DDNSSD::DNSRecord.new(srv_instance_pqdn(proto),
+        DDNSSD::DNSRecord.new(srv_instance_rdn(proto),
             @config.record_ttl,
             :SRV,
             priority,
             weight,
             port.to_i,
-            instance_address_pqdn
+            instance_address_rdn
         )
       end
     end
 
     def ptr_records
       protos.map do |proto|
-        DDNSSD::DNSRecord.new(service_pqdn(proto), @config.record_ttl, :PTR, srv_instance_pqdn(proto))
+        DDNSSD::DNSRecord.new(service_rdn(proto), @config.record_ttl, :PTR, srv_instance_rdn(proto))
       end
     end
 
@@ -249,13 +249,13 @@ module DDNSSD
 
     def txt_records
       protos.map do |proto|
-        DDNSSD::DNSRecord.new(srv_instance_pqdn(proto), @config.record_ttl, :TXT, *parse_tag_labels)
+        DDNSSD::DNSRecord.new(srv_instance_rdn(proto), @config.record_ttl, :TXT, *parse_tag_labels)
       end
     end
 
     def cname_records
       @labels["aliases"].to_s.split(',').map do |relrrname|
-        DDNSSD::DNSRecord.new(relrrname, @config.record_ttl, :CNAME, instance_address_pqdn)
+        DDNSSD::DNSRecord.new(relrrname, @config.record_ttl, :CNAME, instance_address_rdn)
       end
     end
   end

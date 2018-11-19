@@ -138,9 +138,16 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
           rr.value.split(/\s+/).map { |v| v =~ /\A\d+\z/ ? v.to_i : v }
         end
 
-        DDNSSD::DNSRecord.new_relative_from_absolute(
-          @base_domain, rrset.name.chomp("."), rrset.ttl, rrset.type.to_sym, *rrdata
+        dns_record = DDNSSD::DNSRecord.new(
+          rrset.name, rrset.ttl, rrset.type.to_sym, *rrdata
         )
+
+        if DDNSSD::Backend::PUBLISHABLE_TYPES.include?(dns_record.type)
+          dns_record.to_relative(@base_domain)
+        else
+          # import SOA and NS as is
+          dns_record
+        end
       end
     end
   end
