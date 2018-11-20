@@ -272,6 +272,24 @@ describe DDNSSD::Backend::Route53 do
         expect(backend.dns_records).to be_empty
       end
     end
+
+    context "receiving records with value having wrong subdomain" do
+      let(:route53_stubs) do
+        {
+          list_resource_record_sets: route53_response_fixture("wrong_subdomain")
+        }
+      end
+
+      it "tolerates it" do
+        allow(logger).to receive(:warn)
+        expect {
+          records = backend.dns_records
+          expect(backend.dns_records).to be_an(Array)
+          expect(backend.dns_records.reject { |rr| DDNSSD::DNSRecord === rr }).to be_empty
+          expect(backend.dns_records.all? { |rr| DDNSSD::DNSRecord === rr }).to be(true)
+        }.to_not raise_error
+      end
+    end
   end
 
   describe "#publish_record" do

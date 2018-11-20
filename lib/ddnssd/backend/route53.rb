@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'aws-sdk'
 require 'shellwords'
 
@@ -76,7 +78,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
       blank_cache
 
       all_resource_record_sets do |rrset|
-        import_rrset(rrset)
+        import_rrset(rrset, raise_errors: false)
       end
     end
 
@@ -130,7 +132,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
       @logger.error(progname) { (["Error while enumerating all_resource_record_sets: #{ex.message} (#{ex.class})"] + ex.backtrace).join("  \n") }
     end
 
-    def import_rrset(rrset)
+    def import_rrset(rrset, raise_errors: true)
       @cache[rrset.name.chomp(".#{@base_domain}.")][rrset.type.to_sym] = rrset.resource_records.map do |rr|
         rrdata = if rrset.type == "TXT"
           Shellwords.shellwords(rr.value)
@@ -143,12 +145,25 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
         )
 
         if DDNSSD::Backend::PUBLISHABLE_TYPES.include?(dns_record.type)
-          dns_record.to_relative(@base_domain)
+          if [:PTR, :CNAME, :SRV].include?(dns_record.type)
+            value = dns_record.type == :SRV ? dns_record.data.target : dns_record.data.name
+            if value.subdomain_of?(@base_domain)
+              dns_record.to_relative(@base_domain)
+            elsif raise_errors
+              raise RuntimeError,
+                "Can't import #{dns_record.type} record because value isn't a subdomain of #{@base_domain}. #{dns_record.inspect}"
+            else
+              @logger.warn(progname) { "Found a record with a value that isn't a subdomain of #{@base_domain}. Ignoring it. #{dns_record.inspect}" }
+              nil
+            end
+          else
+            dns_record.to_relative(@base_domain)
+          end
         else
           # import SOA and NS as is
           dns_record
         end
-      end
+      end.compact
     end
   end
 
