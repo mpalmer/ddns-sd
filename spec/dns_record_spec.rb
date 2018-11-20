@@ -600,4 +600,74 @@ describe DDNSSD::DNSRecord do
       end
     end
   end
+
+  describe '#subdomain_of?' do
+    let(:base_domain) { Resolv::DNS::Name.create('example.com.') }
+
+    it 'raises an error on a relative record' do
+      expect {
+        DDNSSD::DNSRecord.new("_foo._tcp", 42, :PTR, "_bar._foo._tcp").subdomain_of?(base_domain)
+      }.to raise_error(RuntimeError)
+    end
+
+    it "returns true on A record with that's a subdomain" do
+      expect(DDNSSD::DNSRecord.new("foo.example.com.", 42, :A, "192.0.2.42").subdomain_of?(base_domain)).to eq(true)
+    end
+
+    it "returns false on A record that's not a subdomain" do
+      expect(DDNSSD::DNSRecord.new("foo.freedom.com.", 42, :A, "192.0.2.42").subdomain_of?(base_domain)).to eq(false)
+    end
+
+    it "returns true on AAAA record with that's a subdomain" do
+      expect(DDNSSD::DNSRecord.new("foo.example.com.", 42, :AAAA, "2001:db8::42").subdomain_of?(base_domain)).to eq(true)
+    end
+
+    it "returns false on AAAA record that's not a subdomain" do
+      expect(DDNSSD::DNSRecord.new("foo.freedom.com.", 42, :AAAA, "2001:db8::42").subdomain_of?(base_domain)).to eq(false)
+    end
+
+    it "returns true on CNAME record with that's a subdomain" do
+      expect(DDNSSD::DNSRecord.new("foo.example.com.", 42, :CNAME, "host1.example.com").subdomain_of?(base_domain)).to eq(true)
+    end
+
+    it "returns false on CNAME record that's not a subdomain" do
+      expect(DDNSSD::DNSRecord.new("foo.freedom.com.", 42, :CNAME, "host1.freedom.com").subdomain_of?(base_domain)).to eq(false)
+    end
+
+    it "returns false on CNAME record with value that's not a subdomain" do
+      expect(DDNSSD::DNSRecord.new("foo.example.com.", 42, :CNAME, "host1.freedom.com").subdomain_of?(base_domain)).to eq(false)
+    end
+
+    it "returns true on SRV record with that's a subdomain" do
+      expect(DDNSSD::DNSRecord.new("bar._foo._tcp.example.com.", 42, :SRV, 0, 0, 8080, "bar1.example.com").subdomain_of?(base_domain)).to eq(true)
+    end
+
+    it "returns false on SRV record that's not a subdomain" do
+      expect(DDNSSD::DNSRecord.new("bar._foo._tcp.freedom.com.", 42, :SRV, 0, 0, 8080, "bar1.freedom.com").subdomain_of?(base_domain)).to eq(false)
+    end
+
+    it "returns false on SRV record with value that's not a subdomain" do
+      expect(DDNSSD::DNSRecord.new("bar._foo._tcp.example.com.", 42, :SRV, 0, 0, 8080, "bar1.freedom.com").subdomain_of?(base_domain)).to eq(false)
+    end
+
+    it "returns true on TXT record with that's a subdomain" do
+      expect(DDNSSD::DNSRecord.new("bar._foo._tcp.example.com.", 42, :TXT, "nobugs").subdomain_of?(base_domain)).to eq(true)
+    end
+
+    it "returns false on TXT record that's not a subdomain" do
+      expect(DDNSSD::DNSRecord.new("bar._foo._tcp.freedom.com.", 42, :TXT, "nobugs").subdomain_of?(base_domain)).to eq(false)
+    end
+
+    it "returns true on PTR record with that's a subdomain" do
+      expect(DDNSSD::DNSRecord.new("_foo._tcp.example.com.", 42, :PTR, "bar._foo._tcp.example.com").subdomain_of?(base_domain)).to eq(true)
+    end
+
+    it "returns false on PTR record that's not a subdomain" do
+      expect(DDNSSD::DNSRecord.new("_foo._tcp.freedom.com.", 42, :PTR, "bar._foo._tcp.freedom.com").subdomain_of?(base_domain)).to eq(false)
+    end
+
+    it "returns false on PTR record with value that's not a subdomain" do
+      expect(DDNSSD::DNSRecord.new("_foo._tcp.example.com.", 42, :PTR, "bar._foo._tcp.freedom.com").subdomain_of?(base_domain)).to eq(false)
+    end
+  end
 end
