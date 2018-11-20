@@ -75,7 +75,7 @@ class DDNSSD::Backend::Azure < DDNSSD::Backend
 
     def dnssd_to_az_name(name)
       # we use relative names, they use relative names, hurray!
-      name
+      name.to_s
     end
 
     def dnssd_to_az_records(records)

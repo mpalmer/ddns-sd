@@ -75,17 +75,8 @@ module DDNSSD
       @name.absolute?
     end
 
-    def value_absolute(base_domain)
-      case @type
-      when :PTR, :SRV, :CNAME
-        "#{value}.#{base_domain}"
-      else
-        value
-      end
-    end
-
     def to_absolute(base_domain)
-      raise InvalidStateError.new('Record is already absolute!') if absolute?
+      return self if absolute?
 
       abs_data =
         case type
@@ -103,7 +94,7 @@ module DDNSSD
     end
 
     def to_relative(base_domain)
-      raise InvalidStateError.new('Record is already relative!') unless absolute?
+      return self unless absolute?
 
       rel_data =
         case type
