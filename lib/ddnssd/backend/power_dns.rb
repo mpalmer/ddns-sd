@@ -115,31 +115,31 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
   end
 
   def set_record(rr)
-    @logger.debug(progname) { "-> set_record(#{rr.inspect})" }
+    @logger.debug(progname) { "-> set_record(#{rr.short_inspect} #{rr.inspect})" }
     @stats.measure(op: "add") do
       retryable { resource_record_store.add(rr.to_absolute(base_domain)) }
     end
-    @logger.debug(progname) { "<- set_record(#{rr.inspect})" }
+    @logger.debug(progname) { "<- set_record(#{rr.short_inspect} #{rr.inspect})" }
   end
 
   def add_record(rr)
-    @logger.debug(progname) { "-> add_record(#{rr.inspect})" }
+    @logger.debug(progname) { "-> add_record(#{rr.short_inspect} #{rr.inspect})" }
     @stats.measure(op: "add") do
       retryable { resource_record_store.add(rr.to_absolute(base_domain)) }
     end
-    @logger.debug(progname) { "<- add_record(#{rr.inspect})" }
+    @logger.debug(progname) { "<- add_record(#{rr.short_inspect} #{rr.inspect})" }
   end
 
   def remove_record(rr)
-    @logger.debug(progname) { "-> remove_record(#{rr.inspect})" }
+    @logger.debug(progname) { "-> remove_record(#{rr.short_inspect} #{rr.inspect})" }
     @stats.measure(op: "remove") do
       retryable { resource_record_store.remove(rr.to_absolute(base_domain)) }
     end
-    @logger.debug(progname) { "<- remove_record(#{rr.inspect})" }
+    @logger.debug(progname) { "<- remove_record(#{rr.short_inspect} #{rr.inspect})" }
   end
 
   def remove_srv_record(rel_srv_record)
-    @logger.debug(progname) { "-> remove_srv_record(#{rel_srv_record.inspect})" }
+    @logger.debug(progname) { "-> remove_srv_record(#{rel_srv_record.short_inspect} #{rel_srv_record.inspect})" }
 
     srv_record = rel_srv_record.to_absolute(base_domain)
 
@@ -186,7 +186,7 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
       end # retryable
     end
 
-    @logger.debug(progname) { "<- remove_srv_record(#{rel_srv_record.inspect})" }
+    @logger.debug(progname) { "<- remove_srv_record(#{rel_srv_record.short_inspect} #{rel_srv_record.inspect})" }
   end
 
   private

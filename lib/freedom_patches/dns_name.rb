@@ -16,7 +16,8 @@ class Resolv::DNS::Name
       raise ArgumentError.new("Subdomain mismatch")
     end
 
-    Resolv::DNS::Name.new(self.to_a - other.to_a, false)
+    a = self.to_a
+    Resolv::DNS::Name.new(a.first(a.size - other.to_a.size), false)
   end
 
 end
