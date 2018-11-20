@@ -223,6 +223,7 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
       @logger.debug(progname) { "<- add_record(#{rr.inspect})" }
     rescue Aws::Route53::Errors::InvalidChangeBatch => ex
       if tries_left > 0
+        @logger.debug(progname) { "InvalidChangeBatch for changes: #{changes.inspect}" }
         @logger.debug(progname) { "Received InvalidChangeBatch; refreshing record set for #{rr.name} #{rr.type}" }
 
         sleep(rand * 2)

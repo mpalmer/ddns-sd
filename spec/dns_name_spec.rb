@@ -57,5 +57,11 @@ describe Resolv::DNS::Name do
         Resolv::DNS::Name.create('foo.bar.com.') - Resolv::DNS::Name.create('baz.com.')
       }.to raise_error(ArgumentError)
     end
+
+    it "subtracts from the end" do
+      diff = Resolv::DNS::Name.create('my-server._tcp.my-server.example.com.') -
+        Resolv::DNS::Name.create('my-server.example.com.')
+      expect(diff.to_s).to eq('my-server._tcp')
+    end
   end
 end

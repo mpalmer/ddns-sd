@@ -133,6 +133,10 @@ module DDNSSD
       @name.hash ^ @ttl.hash ^ @data.hash
     end
 
+    def short_inspect
+      "#{@name.to_s} #{@ttl} #{@type} '#{value}'"
+    end
+
     private
 
     def absolute_name?(n)
