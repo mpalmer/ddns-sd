@@ -5,8 +5,6 @@ require 'ddnssd/error'
 module DDNSSD
   class DNSRecord
 
-    class InvalidStateError < DDNSSD::Error; end
-
     attr_reader :ttl, :type, :data
 
     def initialize(name, ttl, type, *data)
@@ -73,6 +71,18 @@ module DDNSSD
 
     def absolute?
       @name.absolute?
+    end
+
+    def subdomain_of?(base_domain)
+      raise RuntimeError, "Can't check subdomain of a relative record" unless absolute?
+
+      return false unless @name.subdomain_of?(base_domain)
+
+      if [:PTR, :CNAME, :SRV].include?(@type)
+        (self.type == :SRV ? @data.target : @data.name).subdomain_of?(base_domain)
+      else
+        true
+      end
     end
 
     def to_absolute(base_domain)

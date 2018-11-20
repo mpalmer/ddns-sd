@@ -145,19 +145,13 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
         )
 
         if DDNSSD::Backend::PUBLISHABLE_TYPES.include?(dns_record.type)
-          if [:PTR, :CNAME, :SRV].include?(dns_record.type)
-            value = dns_record.type == :SRV ? dns_record.data.target : dns_record.data.name
-            if value.subdomain_of?(@base_domain)
-              dns_record.to_relative(@base_domain)
-            elsif raise_errors
-              raise RuntimeError,
-                "Can't import #{dns_record.type} record because value isn't a subdomain of #{@base_domain}. #{dns_record.inspect}"
-            else
-              @logger.warn(progname) { "Found a record with a value that isn't a subdomain of #{@base_domain}. Ignoring it. #{dns_record.inspect}" }
-              nil
-            end
-          else
+          if dns_record.subdomain_of?(@base_domain)
             dns_record.to_relative(@base_domain)
+          elsif raise_errors
+            raise RuntimeError,
+              "Can't import #{dns_record.type} record because value isn't a subdomain of #{@base_domain}. #{dns_record.inspect}"
+          else
+            nil
           end
         else
           # import SOA and NS as is
