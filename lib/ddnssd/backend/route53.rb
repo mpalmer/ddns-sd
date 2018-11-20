@@ -368,13 +368,14 @@ class DDNSSD::Backend::Route53 < DDNSSD::Backend
   end
 
   def change_for(action, rrset)
+    first = rrset.first
     {
       action: action,
       resource_record_set: {
-        name: "#{rrset.first.name}.#{base_domain}",
-        type: rrset.first.type.to_s,
-        ttl: rrset.first.ttl,
-        resource_records: rrset.map { |rr| { value: rr.value_absolute(base_domain) } }
+        name: first.to_absolute(base_domain).name,
+        type: first.type.to_s,
+        ttl: first.ttl,
+        resource_records: rrset.map { |rr| { value: rr.to_absolute(base_domain).value } }
       }
     }
   end

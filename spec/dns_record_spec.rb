@@ -26,10 +26,8 @@ describe DDNSSD::DNSRecord do
   describe '#to_absolute' do
     let(:base_domain) { Resolv::DNS::Name.create('example.com.') }
 
-    it 'raises error on an absolute record' do
-      expect {
-        abs_record.to_absolute(base_domain)
-      }.to raise_error(DDNSSD::DNSRecord::InvalidStateError)
+    it 'returns an absolute record unchanged' do
+      expect(abs_record.to_absolute(base_domain)).to eq(abs_record)
     end
 
     it 'works on relative A record' do
@@ -82,10 +80,8 @@ describe DDNSSD::DNSRecord do
   describe '#to_relative' do
     let(:base_domain) { Resolv::DNS::Name.create('example.com.') }
 
-    it 'raises error on a relative record' do
-      expect {
-        rel_record.to_relative(base_domain)
-      }.to raise_error(DDNSSD::DNSRecord::InvalidStateError)
+    it 'returns a relative record unchanged' do
+      expect(rel_record.to_relative(base_domain)).to eq(rel_record)
     end
 
     it 'works on absolute A record' do
