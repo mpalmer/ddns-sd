@@ -101,12 +101,17 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
       dns_record = DDNSSD::DNSRecord.new("#{rr.name}.", rr.ttl, rr.type.to_sym, *rrdata)
 
       if DDNSSD::Backend::PUBLISHABLE_TYPES.include?(dns_record.type)
-        dns_record.to_relative(base_domain)
+        if dns_record.subdomain_of?(base_domain)
+          dns_record.to_relative(base_domain)
+        else
+          @logger.warn(progname) { "Found a record with a value that isn't a subdomain of #{base_domain}. Ignoring it. #{dns_record.inspect}" }
+          nil
+        end
       else
         # import SOA and others as is
         dns_record
       end
-    end
+    end.compact
   end
 
   def set_record(rr)
