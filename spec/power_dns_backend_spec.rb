@@ -165,6 +165,12 @@ describe DDNSSD::Backend::PowerDNS do
       expect(backend.dns_records).to be_an(Array)
       expect(backend.dns_records.all? { |rr| DDNSSD::DNSRecord === rr }).to be(true)
     end
+
+    it "skips records with values that aren't a subdomain" do
+      allow(logger).to receive(:warn)
+      rr_store.add(DDNSSD::DNSRecord.new('_http._tcp.example.com.', 42, :PTR, "faff._http._tcp.eggsamples.com"))
+      expect(backend.dns_records.any? { |rr| rr.value&.end_with?('eggsamples.com') }).to be(false)
+    end
   end
 
   describe '#publish_record' do
