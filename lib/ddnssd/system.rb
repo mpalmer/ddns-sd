@@ -82,9 +82,12 @@ module DDNSSD
           @containers.delete(id)
         when :suppress_all
           @logger.info(progname) { "Withdrawing all DNS records..." }
-          @containers.values.each do |c|
-            @logger.debug(progname) { "Withdrawing records for container #{c.id}" }
-            @backends.each { |backend| c.suppress_records(backend) }
+          @backends.each do |backend|
+            @logger.debug(progname) { "Withdrawing records from #{backend.name}" }
+            @containers.values.each do |c|
+              @logger.debug(progname) { "Withdrawing records for container #{c.id}" }
+              c.suppress_records(backend)
+            end
           end
           @logger.debug(progname) { "Suppressing common records" }
           @backends.each(&:suppress_shared_records)
