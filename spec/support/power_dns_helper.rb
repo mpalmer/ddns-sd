@@ -18,7 +18,13 @@ module PowerDNSHelper
   end
 
   def preload_db
-    pg_conn = PG.connect(dbname: 'pdns_test', user: 'dnsadmin', password: 'dnsadminpw')
+    pg_conn = PG.connect(
+      host: 'localhost',
+      dbname: 'pdns_test',
+      user: 'dnsadmin',
+      password: 'dnsadminpw'
+    )
+
     conn = MiniSql::Connection.new(pg_conn)
 
     domain_id = conn.query_single(
