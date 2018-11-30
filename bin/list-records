@@ -1,0 +1,54 @@
+#!/usr/bin/env ruby
+
+# List all DNS records for a backend
+
+VALID_BACKEND_NAMES = ['power_dns', 'route53', 'azure']
+
+backend_name = ARGV[0]
+
+unless VALID_BACKEND_NAMES.include?(backend_name)
+  $stderr.puts "Must provide a valid backend name: #{VALID_BACKEND_NAMES.join(', ')}"
+  exit 1
+end
+
+require 'ddnssd/config'
+require 'ddnssd/dns_record'
+require 'ddnssd/backend'
+
+logger = Logger.new($stderr)
+logger.level = "DEBUG"
+
+config = DDNSSD::Config.new(ENV, logger: logger)
+
+backend =
+  case backend_name
+  when 'power_dns'
+    require 'ddnssd/backend/power_dns'
+    DDNSSD::Backend::PowerDNS.new(config)
+  when 'route53'
+    require 'ddnssd/backend/route53'
+    DDNSSD::Backend::Route53.new(config)
+  when 'azure'
+    require 'ddnssd/backend/azure'
+    DDNSSD::Backend::Azure.new(config)
+  end
+
+all_records = backend.dns_records
+
+widths = { name: 0, value: 0 }
+all_records.each do |rr|
+  widths[:name] = rr.name.to_s.length if rr.name.to_s.length > widths[:name]
+  widths[:value] = rr.value.to_s.length if rr.value.to_s.length > widths[:value]
+end
+
+def print_records(records, type, format)
+  records.select { |rr| rr.type.to_s == type.to_s }.each do |rr|
+    puts format % [rr.name.to_s, rr.ttl, rr.type, rr.value]
+  end
+end
+
+format_str = "%#{widths[:name]}s %5d %7s  %-#{widths[:value]}s"
+
+[:A, :AAAA, :SRV, :TXT, :PTR, :CNAME].each do |type|
+  print_records(all_records, type, format_str)
+end
