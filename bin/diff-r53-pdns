@@ -19,11 +19,6 @@ pdns = DDNSSD::Backend::PowerDNS.new(config)
 r53_records = r53.dns_records
 pdns_records = pdns.dns_records
 
-# r53_records.select! { |rr| rr.name =~ /\.#{Regexp.escape(r53.base_domain)}\z/ }
-# if pdns.base_domain.end_with?(r53.base_domain)
-#   r53_records.reject! { |rr| rr.name =~ /\.#{Regexp.escape(pdns.base_domain)}\z/ }
-# end
-
 puts "Route 53:  #{r53_records.size} records"
 puts "Power DNS: #{pdns_records.size} records"
 
