@@ -538,6 +538,30 @@ running `ddns-sd` will need to have the following IAM policy attached:
     the 14-or-so character string that's under the "Hosted Zone ID" column
     in the Route53 zone list.
 
+## Power DNS
+
+**`DDNSSD_BACKEND=power_dns`**
+
+Maintains records in a PostgreSQL database used by a [Power DNS](https://www.powerdns.com/) server.
+The database schema should be compatible with the one found in db/pdns-schema.sql, with a
+user having select privileges on the domains and records table, and select, insert, and delete
+privileges on the records table.
+
+### Configuration
+
+* **`DDNSSD_POWER_DNS_PG_DBNAME`**
+
+The PostgreSQL database name.
+
+* **`DDNSSD_POWER_DNS_PG_USER`**
+
+The PostgreSQL user with select privileges on the domains and records table, and select, insert,
+and delete privileges on the records table.
+
+* **`DDNSSD_POWER_DNS_PG_PASSWORD`**
+
+The password for the above PostgreSQL user.
+
 
 ## Azure DNS
 
