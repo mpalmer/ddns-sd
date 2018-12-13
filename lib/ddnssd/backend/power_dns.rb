@@ -214,7 +214,7 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
 
     begin
       yield
-    rescue PG::UnableToSend, PG::ConnectionBad, PG::UndefinedTable, PGServerNotFound => ex
+    rescue PG::Error, PGServerNotFound => ex
       if @pg_conn
         @pg_conn.close rescue nil
       end

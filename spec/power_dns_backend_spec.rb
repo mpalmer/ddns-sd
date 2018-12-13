@@ -209,6 +209,8 @@ describe DDNSSD::Backend::PowerDNS do
             raise PG::UndefinedTable
           elsif call_count == 3
             raise PG::UnableToSend
+          elsif call_count == 4
+            raise PG::ObjectNotInPrerequisiteState
           else
             m.call(*args)
           end
