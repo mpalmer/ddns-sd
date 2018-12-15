@@ -35,26 +35,11 @@ namespace :docker do
   desc "Build a new docker image"
   task :build do
     sh "docker pull ruby:2.3-alpine"
-    sh "docker build -t discourse/ddns-sd --build-arg=http_proxy=#{ENV['http_proxy']} --build-arg=GIT_REVISION=$(git rev-parse HEAD) ."
+    sh "docker build -t womble/ddns-sd --build-arg=http_proxy=#{ENV['http_proxy']} --build-arg=GIT_REVISION=$(git rev-parse HEAD) ."
   end
 
   desc "Publish a new docker image"
   task publish: :build do
-    sh "docker push discourse/ddns-sd"
-  end
-end
-
-namespace :test do
-  desc "Setup for tests"
-  task :prepare do
-    sh "dropdb pdns_test --if-exists"
-    sh "createdb pdns_test"
-    unless `psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='pdns'"`.chomp == '1'
-      sh %[psql -c "CREATE USER pdns PASSWORD 'pdnspw'"]
-    end
-    unless `psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='dnsadmin'"`.chomp == '1'
-      sh %[psql -c "CREATE USER dnsadmin PASSWORD 'dnsadminpw'"]
-    end
-    sh "psql -d pdns_test < db/pdns-schema.sql"
+    sh "docker push womble/ddns-sd"
   end
 end
