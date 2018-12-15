@@ -23,6 +23,16 @@ describe DDNSSD::DNSRecord do
     end
   end
 
+  describe "#short_inspect" do
+    it "includes the long rrname for an absolute record" do
+      expect(abs_record.short_inspect).to match(/foo\.example\.com/)
+    end
+
+    it "includes the short rrname for a relative record" do
+      expect(rel_record.short_inspect).to match(/foo[^.]/)
+    end
+  end
+
   describe '#to_absolute' do
     let(:base_domain) { Resolv::DNS::Name.create('example.com.') }
 
