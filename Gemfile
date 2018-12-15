@@ -1,16 +1,9 @@
-ruby '> 2.3', '< 2.5'
-
 source 'https://rubygems.org'
 
-gem 'aws-sdk', '~> 2.10'
-gem 'azure_mgmt_dns', '~> 0.16'
 gem 'docker-api', '~> 1.33'
 # See https://github.com/swipely/docker-api/issues/409
 gem 'excon', '~> 0.59'
-gem 'frankenstein', '~> 0.1'
-gem 'pg'
-gem 'mini_sql'
-gem 'dns-sd'
+gem 'frankenstein', '~> 1.0'
 
 group :development do
   gem 'byebug'
@@ -23,4 +16,24 @@ group :development do
   gem 'rubocop'
   gem 'simplecov'
   gem 'yard'
+end
+
+group :azure_backend do
+  gem 'azure_mgmt_dns', '~> 0.16'
+end
+
+group :route53_backend do
+  gem 'aws-sdk', '~> 2.10'
+end
+
+group :psql_backend do
+  gem 'sequel'
+end
+
+group :psql_sqlite do
+  gem 'sqlite3'
+end
+
+group :psql_pg do
+  gem 'pg'
 end

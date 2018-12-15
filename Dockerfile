@@ -1,26 +1,26 @@
-FROM ruby:2.3-alpine
-
-MAINTAINER Matt Palmer "matt.palmer@discourse.org"
+FROM ruby:2.6
 
 COPY Gemfile Gemfile.lock /home/ddnssd/
 
-RUN adduser -D ddnssd \
+RUN useradd -M -N -r -s /bin/bash -u 1000 -o ddnssd \
 	&& docker_group="$(getent group 999 | cut -d : -f 1)" \
-	&& if [ -z "$docker_group" ]; then addgroup -g 999 docker; docker_group=docker; fi \
-	&& addgroup ddnssd "$docker_group" \
-	&& apk update \
-	&& apk add build-base \
-	&& apk add postgresql-dev \
+	&& if [ -z "$docker_group" ]; then groupadd -g 999 docker; docker_group=docker; fi \
+	&& usermod -a -G "$docker_group" ddnssd \
+	&& apt-get update \
+	&& apt-get install -y libpq-dev libpq5 libsqlite3-0 libsqlite3-dev \
 	&& cd /home/ddnssd \
-	&& su -pc 'bundle install --deployment --without development' ddnssd \
-	&& apk del build-base \
-	&& rm -rf /tmp/* /var/cache/apk/*
+	&& chown -R ddnssd . \
+	&& su -pc 'bundle install --deployment --without "development route53_backend azure_backend"' ddnssd \
+	&& apt-get purge -y libpq-dev libsqlite3-dev \
+	&& apt-get autoremove -y --purge \
+	&& apt-get clean \
+	&& rm -rf /var/lib/apt/lists/*
 
 ARG GIT_REVISION=invalid-build
 ENV DDNSSD_GIT_REVISION=$GIT_REVISION DDNSSD_DISABLE_LOG_TIMESTAMPS=yes
 
 COPY bin/* /usr/local/bin/
-COPY lib/ /usr/local/lib/ruby/2.3.0/
+COPY lib/ /usr/local/lib/ruby/2.6.0/
 
 EXPOSE 9218
 LABEL org.discourse.service._prom-exp.port=9218 org.discourse.service._prom-exp.instance=ddns-sd

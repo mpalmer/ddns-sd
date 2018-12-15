@@ -17,7 +17,7 @@ class ListIncompletelyCoveredFiles
       puts
       puts "Files with incomplete test coverage:"
       incompletes.each do |f|
-        printf "    %2.02f%%    %s", f.covered_percent, f.filename
+        printf "    %2.02f%%    %s\n", f.covered_percent, f.filename
       end
       puts; puts
     end
@@ -44,5 +44,4 @@ Dir["./spec/support/**/*.rb"].each { |f| require f }
 RSpec.configure do |config|
   config.include ExampleMethods
   config.extend  ExampleGroupMethods
-  config.include PowerDNSHelper
 end
