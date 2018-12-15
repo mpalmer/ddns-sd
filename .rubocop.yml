@@ -1,1 +1,4 @@
 inherit_from: https://raw.githubusercontent.com/discourse/discourse/master/.rubocop.yml
+
+Lint/ShadowingOuterLocalVariable:
+    Enabled: false
