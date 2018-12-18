@@ -4,10 +4,15 @@
 # don't belong to any of those servers.
 
 operation = ARGV[0]
-server_ids = ARGV[1..-1]
 
-unless ['noop', 'perform'].include?(operation.downcase)
-  $stderr.puts 'Operation must be one of: noop, perform'
+unless operation.nil?
+  operation = nil unless ['noop', 'perform'].include?(operation.downcase)
+end
+
+server_ids = operation.nil? ? ARGV[0..-1] : ARGV[1..-1]
+
+if server_ids.empty?
+  $stderr.puts 'You need to include EC2 server IDs as arguments'
   exit 1
 end
 
