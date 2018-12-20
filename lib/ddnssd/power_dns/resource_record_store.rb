@@ -70,6 +70,19 @@ module DDNSSD
         builder.exec
       end
 
+      def upsert(dns_record)
+        begin
+          @backend.db.exec('BEGIN')
+          remove_with(type: dns_record.type, name: dns_record.name)
+          count = add(dns_record)
+          @backend.db.exec('COMMIT')
+          count
+        rescue => ex
+          @backend.db.exec('ROLLBACK')
+          raise ex
+        end
+      end
+
       def all
         @backend.db.query(
           "SELECT name, ttl, type, content

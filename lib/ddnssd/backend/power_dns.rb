@@ -116,8 +116,8 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
 
   def set_record(rr)
     @logger.debug(progname) { "-> set_record(#{rr.short_inspect} #{rr.inspect})" }
-    @stats.measure(op: "add") do
-      retryable { resource_record_store.add(rr.to_absolute(base_domain)) }
+    @stats.measure(op: "set") do
+      retryable { resource_record_store.upsert(rr.to_absolute(base_domain)) }
     end
     @logger.debug(progname) { "<- set_record(#{rr.short_inspect} #{rr.inspect})" }
   end

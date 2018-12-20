@@ -187,86 +187,144 @@ describe DDNSSD::Backend::PowerDNS do
     context "with an A record" do
       let(:dns_record) { DDNSSD::DNSRecord.new("flingle", 42, :A, "192.0.2.42") }
 
-      it "upserts the A record" do
-        backend.publish_record(dns_record)
-        records = rr_store.lookup(name: "flingle.example.com")
-        expect(records.size).to eq(1)
-        new_record = records.first
-        expect(new_record).to_not be_nil
-        expect(new_record.ttl).to eq(42)
-        expect(new_record.type).to eq('A')
-        expect(new_record.content).to eq(dns_record.data.address.to_s)
+      shared_examples "A upsert" do
+        it "upserts the A record" do
+          backend.publish_record(dns_record)
+          records = rr_store.lookup(name: "flingle.example.com")
+          expect(records.size).to eq(1)
+          new_record = records.first
+          expect(new_record).to_not be_nil
+          expect(new_record.ttl).to eq(42)
+          expect(new_record.type).to eq('A')
+          expect(new_record.content).to eq(dns_record.data.address.to_s)
+        end
       end
 
-      it "can retry on some errors" do
-        allow(backend).to receive(:next_timeout).and_return(0.1)
-        call_count = 0
-        allow_any_instance_of(DDNSSD::PowerDNS::ResourceRecordStore).to receive(:add).and_wrap_original do |m, *args|
-          call_count += 1
-          if call_count == 1
-            raise PG::ConnectionBad
-          elsif call_count == 2
-            raise PG::UndefinedTable
-          elsif call_count == 3
-            raise PG::UnableToSend
-          elsif call_count == 4
-            raise PG::ObjectNotInPrerequisiteState
-          else
-            m.call(*args)
+      context 'no existing record' do
+        it_behaves_like "A upsert"
+
+        it "can retry on some errors" do
+          allow(backend).to receive(:next_timeout).and_return(0.1)
+          call_count = 0
+          allow_any_instance_of(DDNSSD::PowerDNS::ResourceRecordStore).to receive(:add).and_wrap_original do |m, *args|
+            call_count += 1
+            if call_count == 1
+              raise PG::ConnectionBad
+            elsif call_count == 2
+              raise PG::UndefinedTable
+            elsif call_count == 3
+              raise PG::UnableToSend
+            elsif call_count == 4
+              raise PG::ObjectNotInPrerequisiteState
+            else
+              m.call(*args)
+            end
           end
+
+          backend.publish_record(dns_record)
+          records = rr_store.lookup(name: "flingle.example.com")
+          expect(records.size).to eq(1)
         end
 
-        backend.publish_record(dns_record)
-        records = rr_store.lookup(name: "flingle.example.com")
-        expect(records.size).to eq(1)
+        it "logs unhandled exceptions and keeps running" do
+          allow_any_instance_of(DDNSSD::PowerDNS::ResourceRecordStore).to receive(:add).and_raise('Splat!')
+          expect(logger).to receive(:error).with(instance_of(String))
+          expect { backend.publish_record(dns_record) }.to_not raise_error
+        end
       end
 
-      it "logs unhandled exceptions and keeps running" do
-        allow_any_instance_of(DDNSSD::PowerDNS::ResourceRecordStore).to receive(:add).and_raise('Splat!')
-        expect(logger).to receive(:error).with(instance_of(String))
-        expect { backend.publish_record(dns_record) }.to_not raise_error
+      context 'existing record' do
+        before { rr_store.add(DDNSSD::DNSRecord.new("flingle.example.com", 42, :A, "192.0.2.24")) }
+        it_behaves_like "A upsert"
+
+        context 'other records with same name' do
+          before do
+            rr_store.add(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42"))
+            rr_store.add(DDNSSD::DNSRecord.new("flingle.example.com", 42, :TXT, "why is this record here"))
+          end
+
+          it "it only affects the A record" do
+            backend.publish_record(dns_record)
+            records = rr_store.lookup(name: "flingle.example.com")
+            expect(records.size).to eq(3)
+            expect(records.map(&:type).map(&:to_sym)).to contain_exactly(:A, :AAAA, :TXT)
+          end
+        end
       end
     end
 
     context "with an AAAA record" do
-      it "upserts the AAAA record" do
-        dns_record = DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::42")
-        backend.publish_record(dns_record)
-        records = rr_store.lookup(name: "flingle.example.com")
-        expect(records.size).to eq(1)
-        new_record = records.first
-        expect(new_record).to_not be_nil
-        expect(new_record.ttl).to eq(42)
-        expect(new_record.type).to eq('AAAA')
-        expect(new_record.content).to eq(dns_record.data.address.to_s)
+      shared_examples "AAAA upsert" do
+        it "upserts the AAAA record" do
+          dns_record = DDNSSD::DNSRecord.new("flingle", 42, :AAAA, "2001:db8::24")
+          backend.publish_record(dns_record)
+          records = rr_store.lookup(name: "flingle.example.com")
+          expect(records.size).to eq(1)
+          new_record = records.first
+          expect(new_record).to_not be_nil
+          expect(new_record.ttl).to eq(42)
+          expect(new_record.type).to eq('AAAA')
+          expect(new_record.content).to eq(dns_record.data.address.to_s)
+        end
+      end
+
+      context 'no existing record' do
+        it_behaves_like "AAAA upsert"
+      end
+
+      context 'existing record' do
+        before { rr_store.add(DDNSSD::DNSRecord.new("flingle.example.com", 42, :AAAA, "2001:db8::42")) }
+        it_behaves_like "AAAA upsert"
       end
     end
 
     context "with a CNAME record" do
-      it "upserts the CNAME record" do
-        dns_record = DDNSSD::DNSRecord.new("db", 42, :CNAME, "pgsql.host27")
-        backend.publish_record(dns_record)
-        records = rr_store.lookup(name: "db.example.com")
-        expect(records.size).to eq(1)
-        new_record = records.first
-        expect(new_record).to_not be_nil
-        expect(new_record.ttl).to eq(42)
-        expect(new_record.type).to eq('CNAME')
-        expect(new_record.content).to eq("pgsql.host27.example.com")
+      shared_examples "CNAME upsert" do
+        it "upserts the CNAME record" do
+          dns_record = DDNSSD::DNSRecord.new("db", 42, :CNAME, "pgsql.host27")
+          backend.publish_record(dns_record)
+          records = rr_store.lookup(name: "db.example.com")
+          expect(records.size).to eq(1)
+          new_record = records.first
+          expect(new_record).to_not be_nil
+          expect(new_record.ttl).to eq(42)
+          expect(new_record.type).to eq('CNAME')
+          expect(new_record.content).to eq("pgsql.host27.example.com")
+        end
+      end
+
+      context 'no existing record' do
+        it_behaves_like "CNAME upsert"
+      end
+
+      context 'existing record' do
+        before { rr_store.add(DDNSSD::DNSRecord.new("db.example.com", 42, :CNAME, "pgsql.host26.example.com")) }
+        it_behaves_like "CNAME upsert"
       end
     end
 
     context "with a TXT record" do
-      it "upserts the TXT record" do
-        dns_record = DDNSSD::DNSRecord.new("faff._http._tcp", 42, :TXT, 'something "funny"', "this too")
-        backend.publish_record(dns_record)
-        records = rr_store.lookup(name: "faff._http._tcp.example.com")
-        expect(records.size).to eq(1)
-        new_record = records.first
-        expect(new_record).to_not be_nil
-        expect(new_record.ttl).to eq(42)
-        expect(new_record.type).to eq('TXT')
-        expect(new_record.content).to eq('"something \"funny\"" "this too"')
+      shared_examples "TXT upsert" do
+        it "upserts the TXT record" do
+          dns_record = DDNSSD::DNSRecord.new("faff._http._tcp", 42, :TXT, 'something "funny"', "this too")
+          backend.publish_record(dns_record)
+          records = rr_store.lookup(name: "faff._http._tcp.example.com")
+          expect(records.size).to eq(1)
+          new_record = records.first
+          expect(new_record).to_not be_nil
+          expect(new_record.ttl).to eq(42)
+          expect(new_record.type).to eq('TXT')
+          expect(new_record.content).to eq('"something \"funny\"" "this too"')
+        end
+      end
+
+      context 'no existing record' do
+        it_behaves_like "TXT upsert"
+      end
+
+      context 'existing record' do
+        before { rr_store.add(DDNSSD::DNSRecord.new("faff._http._tcp.example.com", 42, :TXT, "old")) }
+        it_behaves_like "TXT upsert"
       end
     end
 

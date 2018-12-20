@@ -72,4 +72,53 @@ describe DDNSSD::PowerDNS::ResourceRecordStore do
     end
   end
 
+  describe '#upsert' do
+    it 'can add a new record' do
+      count = rr_store.upsert(a_record)
+      expect(count).to eq(1)
+
+      rows = rr_store.lookup(name: a_record.name)
+      expect(rows.size).to eq(1)
+      r = rows.first
+      expect(r.name).to eq('power.sd.example.com')
+      expect(r.ttl).to eq(42)
+      expect(r.type).to eq('A')
+      expect(r.content).to eq('192.0.2.42')
+    end
+
+    context 'with existing record' do
+      before do
+        rr_store.add(DDNSSD::DNSRecord.new('power.sd.example.com', 42, :A, '192.0.2.24'))
+      end
+
+      it 'can replace an existing record' do
+        count = rr_store.upsert(a_record)
+        expect(count).to eq(1)
+
+        rows = rr_store.lookup(name: a_record.name)
+        expect(rows.size).to eq(1)
+        r = rows.first
+        expect(r.name).to eq('power.sd.example.com')
+        expect(r.ttl).to eq(42)
+        expect(r.type).to eq('A')
+        expect(r.content).to eq('192.0.2.42')
+      end
+
+      it 'rolls back on exception' do
+        allow_any_instance_of(DDNSSD::PowerDNS::ResourceRecordStore).to receive(:add).and_raise(RuntimeError, "Fail")
+
+        expect {
+          rr_store.upsert(a_record)
+        }.to raise_error(RuntimeError)
+
+        rows = rr_store.lookup(name: a_record.name)
+        expect(rows.size).to eq(1)
+        r = rows.first
+        expect(r.name).to eq('power.sd.example.com')
+        expect(r.ttl).to eq(42)
+        expect(r.type).to eq('A')
+        expect(r.content).to eq('192.0.2.24')
+      end
+    end
+  end
 end
