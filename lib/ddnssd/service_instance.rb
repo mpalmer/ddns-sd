@@ -22,13 +22,6 @@ module DDNSSD
       end
 
       begin
-        protos.each do |proto|
-          unless @container.port_exposed?("#{@labels["port"]}/#{proto}")
-            raise ServiceInstanceValidationError,
-              "Port specified in labels (#{@labels["port"]}/#{proto}) on container #{container_desc} not exposed."
-          end
-        end
-
         # This ordering is quite particular; it makes sure that records
         # which reference other records are created after the referenced
         # records.  That's not *essential*, but it is polite.

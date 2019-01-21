@@ -656,7 +656,10 @@ describe DDNSSD::ServiceInstance do
         }
       end
 
-      it_behaves_like "a service instance error"
+      # Exposing isn't needed to publish a port or connect to a container.
+      it "has a SRV record pointing to the container+port" do
+        expect(result).to have_SRV_record("exposed80._http._tcp", "0 0 1337 asdfasdfexpo.speccy")
+      end
     end
   end
 end
