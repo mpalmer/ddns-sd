@@ -140,7 +140,7 @@ module DDNSSD
     end
 
     def a_records
-      if !@container.host_network && instance_v4_address
+      if !@config.ipv6_only && !@container.host_network && instance_v4_address
         [DDNSSD::DNSRecord.new(instance_address_rdn, @config.record_ttl, :A, instance_v4_address)]
       else
         []

@@ -73,6 +73,30 @@ describe DDNSSD::ServiceInstance do
         it "points to the service instance" do
           expect(result).to have_PTR_record("_http._tcp", "exposed80._http._tcp")
         end
+
+        context "DDNSSD_IPV6_ONLY mode" do
+          let(:env) { base_env.merge('DDNSSD_IPV6_ONLY' => 'true') }
+
+          it "does not have an A record" do
+            expect(result).to_not have_A_record
+          end
+
+          it "points to the container's IPv6 address" do
+            expect(result).to have_AAAA_record("asdfasdfexpo.speccy", "2001:db8::42")
+          end
+
+          it "has a SRV record pointing to the container+exposed port" do
+            expect(result).to have_SRV_record("exposed80._http._tcp", "0 0 80 asdfasdfexpo.speccy")
+          end
+
+          it "has an empty TXT record" do
+            expect(result).to have_TXT_record("exposed80._http._tcp", [""])
+          end
+
+          it "points to the service instance" do
+            expect(result).to have_PTR_record("_http._tcp", "exposed80._http._tcp")
+          end
+        end
       end
 
       context "with an exposed port and no IPv6 address" do
@@ -97,6 +121,18 @@ describe DDNSSD::ServiceInstance do
         it "points to the service instance" do
           expect(result).to have_PTR_record("_http._tcp", "exposed80._http._tcp")
         end
+
+        context "DDNSSD_IPV6_ONLY mode" do
+          let(:env) { base_env.merge('DDNSSD_IPV6_ONLY' => 'true') }
+
+          it "does not have an A record" do
+            expect(result).to_not have_A_record
+          end
+
+          it "does not have a AAAA record" do
+            expect(result).to_not have_AAAA_record
+          end
+        end
       end
 
       context "with a published port and host IP address configured" do
@@ -120,6 +156,18 @@ describe DDNSSD::ServiceInstance do
 
         it "points to the service instance" do
           expect(result).to have_PTR_record("_http._tcp", "pub80._http._tcp")
+        end
+
+        context "DDNSSD_IPV6_ONLY mode" do
+          let(:env) { base_env.merge('DDNSSD_IPV6_ONLY' => 'true') }
+
+          it "does not have an A record" do
+            expect(result).to_not have_A_record
+          end
+
+          it "does not have a AAAA record" do
+            expect(result).to_not have_AAAA_record
+          end
         end
       end
 
@@ -148,6 +196,18 @@ describe DDNSSD::ServiceInstance do
 
         it "points to the service instance" do
           expect(result).to have_PTR_record("_http._tcp", "pub80._http._tcp")
+        end
+
+        context "DDNSSD_IPV6_ONLY mode" do
+          let(:env) { base_env.merge('DDNSSD_IPV6_ONLY' => 'true') }
+
+          it "does not have an A record" do
+            expect(result).to_not have_A_record
+          end
+
+          it "does not have a AAAA record" do
+            expect(result).to_not have_AAAA_record
+          end
         end
       end
 
