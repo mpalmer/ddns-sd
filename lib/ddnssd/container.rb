@@ -4,7 +4,7 @@ module DDNSSD
   class Container
     attr_reader :id, :name, :ipv4_address, :ipv6_address, :host_network
 
-    attr_accessor :stopped
+    attr_accessor :stopped, :crashed
 
     def initialize(docker_data, system_config)
       @id = docker_data.id

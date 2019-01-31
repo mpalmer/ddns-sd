@@ -61,6 +61,10 @@ module DDNSSD
           end
 
           if docker_container
+            if @containers[item.last]&.crashed
+              @logger.warn(progname) { "Container #{item.last} that didn't stop cleanly has restarted. Recreating its records." }
+              @backends.each { |backend| @containers[item.last].suppress_records(backend) }
+            end
             @containers[item.last] = DDNSSD::Container.new(docker_container, @config)
             @backends.each { |backend| @containers[item.last].publish_records(backend) }
           end
@@ -75,11 +79,11 @@ module DDNSSD
 
           if exitcode == 0 || @containers[id].stopped
             @backends.each { |backend| @containers[id].suppress_records(backend) }
+            @containers.delete(id)
           else
+            @containers[id].crashed = true
             @logger.warn(progname) { "Container #{id} did not stop cleanly (exitcode #{exitcode}); not suppressing records" }
           end
-
-          @containers.delete(id)
         when :suppress_all
           @logger.info(progname) { "Withdrawing all DNS records..." }
           @backends.each do |backend|

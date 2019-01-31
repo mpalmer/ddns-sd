@@ -153,7 +153,6 @@ describe DDNSSD::System do
     describe "processing message" do
       let(:mock_conn) { instance_double(Docker::Connection) }
       let(:docker_container) { container_fixture("published_port80") }
-      let(:ddnssd_container) { instance_double(DDNSSD::Container) }
 
       before(:each) do
         # This one's for the container_fixture calls
@@ -162,121 +161,178 @@ describe DDNSSD::System do
         allow(Docker::Connection).to receive(:new).with("unix:///var/run/test.sock", {}).and_return(mock_conn)
 
         allow(Docker::Container).to receive(:get).with("asdfasdfpub80", {}, mock_conn).and_return(docker_container)
-        allow(DDNSSD::Container).to receive(:new).with(docker_container, system.config).and_return(ddnssd_container)
       end
 
-      describe ":started" do
-        it "tells the container to go publish itself" do
-          expect(mock_queue).to receive(:pop).and_return([:started, "asdfasdfpub80"])
-          expect(ddnssd_container).to receive(:publish_records).with(mock_backend)
-
-          system.run
-        end
-
-        it "does nothing if docker says the container doesn't exist" do
-          allow(Docker::Container).to receive(:get).with("destroyedalready", {}, mock_conn).and_raise(Docker::Error::NotFoundError)
-          expect(mock_queue).to receive(:pop).and_return([:started, "destroyedalready"])
-          expect(ddnssd_container).to_not receive(:publish_records).with(mock_backend)
+      describe ':started' do
+        it "recreates records for containers that had crashed" do
+          # crashed containers are ones that :died, but never :stopped.
           allow(logger).to receive(:warn).with("DDNSSD::System")
+          crashed_container = DDNSSD::Container.new(docker_container, system.config)
+          crashed_container.crashed = true
+          system.instance_variable_get(:@containers)["asdfasdfpub80"] = crashed_container
+
+          expect(mock_queue).to receive(:pop).and_return([:started, crashed_container.id])
+          expect(crashed_container).to receive(:suppress_records).with(mock_backend)
+          expect(crashed_container).to_not receive(:publish_records)
+
+          new_ddnssd_container = DDNSSD::Container.new(docker_container, system.config)
+          allow(DDNSSD::Container).to receive(:new).with(docker_container, system.config).and_return(new_ddnssd_container)
+          expect(new_ddnssd_container).to receive(:publish_records).with(mock_backend)
+
           system.run
+
+          expect(system.instance_variable_get(:@containers)["asdfasdfpub80"]&.crashed).to be_falsy
+        end
+      end
+
+      context 'mocked DDNSSD::Container' do
+        let(:ddnssd_container) { DDNSSD::Container.new(docker_container, system.config) }
+
+        before(:each) do
+          allow(DDNSSD::Container).to receive(:new).with(docker_container, system.config).and_return(ddnssd_container)
         end
 
-        context "with multiple backends" do
-          let(:env) { base_env.merge("DDNSSD_BACKEND" => "test_queue,log") }
-
-          it "tells the container to publish itself everywhere" do
+        describe ":started" do
+          it "tells the container to go publish itself" do
             expect(mock_queue).to receive(:pop).and_return([:started, "asdfasdfpub80"])
             expect(ddnssd_container).to receive(:publish_records).with(mock_backend)
-            expect(ddnssd_container).to receive(:publish_records).with(mock_log_backend)
-
-            system.run
-          end
-        end
-      end
-
-      describe ":stopped" do
-        it "records that the container was requested to stop" do
-          system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
-
-          expect(mock_queue).to receive(:pop).and_return([:stopped, "asdfasdfpub80"])
-          expect(ddnssd_container).to receive(:stopped=).with(true)
-
-          system.run
-        end
-
-        it "handles a container that doesn't exist" do
-          expect(mock_queue).to receive(:pop).and_return([:stopped, "destroyedalready"])
-          allow(logger).to receive(:warn).with("DDNSSD::System")
-          system.run
-        end
-      end
-
-      describe ":died" do
-        before(:each) do
-          allow(ddnssd_container).to receive(:stopped).and_return(false)
-        end
-
-        context "with normal exit status" do
-          it "tells the container to go suppress itself" do
-            system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
-
-            expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 0])
-            expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
 
             system.run
           end
 
-          it "handles a container that doesn't exist" do
-            expect(mock_queue).to receive(:pop).and_return([:died, "destroyedalready", 0])
-            expect(ddnssd_container).to_not receive(:suppress_records).with(mock_backend)
+          it "does nothing if docker says the container doesn't exist" do
+            allow(Docker::Container).to receive(:get).with("destroyedalready", {}, mock_conn).and_raise(Docker::Error::NotFoundError)
+            expect(mock_queue).to receive(:pop).and_return([:started, "destroyedalready"])
+            expect(ddnssd_container).to_not receive(:publish_records).with(mock_backend)
             allow(logger).to receive(:warn).with("DDNSSD::System")
-
             system.run
           end
 
           context "with multiple backends" do
             let(:env) { base_env.merge("DDNSSD_BACKEND" => "test_queue,log") }
 
-            it "tells the container to suppress itself everywhere" do
+            it "tells the container to publish itself everywhere" do
+              expect(mock_queue).to receive(:pop).and_return([:started, "asdfasdfpub80"])
+              expect(ddnssd_container).to receive(:publish_records).with(mock_backend)
+              expect(ddnssd_container).to receive(:publish_records).with(mock_log_backend)
+
+              system.run
+            end
+          end
+        end
+
+        describe ":stopped" do
+          it "records that the container was requested to stop" do
+            system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
+
+            expect(mock_queue).to receive(:pop).and_return([:stopped, "asdfasdfpub80"])
+            expect(ddnssd_container).to receive(:stopped=).with(true)
+
+            system.run
+          end
+
+          it "handles a container that doesn't exist" do
+            expect(mock_queue).to receive(:pop).and_return([:stopped, "destroyedalready"])
+            allow(logger).to receive(:warn).with("DDNSSD::System")
+            system.run
+          end
+        end
+
+        describe ":died" do
+          before(:each) do
+            allow(ddnssd_container).to receive(:stopped).and_return(false)
+          end
+
+          context "with normal exit status" do
+            it "tells the container to go suppress itself" do
               system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
 
               expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 0])
               expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
-              expect(ddnssd_container).to receive(:suppress_records).with(mock_log_backend)
+
+              system.run
+            end
+
+            it "handles a container that doesn't exist" do
+              expect(mock_queue).to receive(:pop).and_return([:died, "destroyedalready", 0])
+              expect(ddnssd_container).to_not receive(:suppress_records).with(mock_backend)
+              allow(logger).to receive(:warn).with("DDNSSD::System")
+
+              system.run
+            end
+
+            context "with multiple backends" do
+              let(:env) { base_env.merge("DDNSSD_BACKEND" => "test_queue,log") }
+
+              it "tells the container to suppress itself everywhere" do
+                system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
+
+                expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 0])
+                expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
+                expect(ddnssd_container).to receive(:suppress_records).with(mock_log_backend)
+
+                system.run
+              end
+            end
+          end
+
+          context "with abnormal exit status" do
+            it "does not suppress records" do
+              system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
+
+              expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 42])
+              expect(ddnssd_container).to_not receive(:suppress_records)
+              expect(ddnssd_container).to receive(:crashed=).with(true)
+              expect(logger).to receive(:warn).with("DDNSSD::System")
+
+              system.run
+            end
+
+            it "handles a container that doesn't exist" do
+              expect(mock_queue).to receive(:pop).and_return([:died, "destroyedalready", 42])
+              expect(ddnssd_container).to_not receive(:suppress_records).with(mock_backend)
+              allow(logger).to receive(:warn).with("DDNSSD::System")
 
               system.run
             end
           end
+
+          context "with abnormal exit status after being stopped" do
+            it "suppresses records" do
+              expect(ddnssd_container).to receive(:stopped).and_return(true)
+
+              system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
+
+              expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 42])
+              expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
+
+              system.run
+            end
+
+            context "with multiple backends" do
+              let(:env) { base_env.merge("DDNSSD_BACKEND" => "test_queue,log") }
+
+              it "tells the container to suppress itself everywhere" do
+                expect(ddnssd_container).to receive(:stopped).and_return(true)
+                system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
+
+                expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 42])
+                expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
+                expect(ddnssd_container).to receive(:suppress_records).with(mock_log_backend)
+
+                system.run
+              end
+            end
+          end
         end
 
-        context "with abnormal exit status" do
-          it "does not suppress records" do
-            system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
-
-            expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 42])
-            expect(ddnssd_container).to_not receive(:suppress_records)
-            expect(logger).to receive(:warn).with("DDNSSD::System")
-
-            system.run
-          end
-
-          it "handles a container that doesn't exist" do
-            expect(mock_queue).to receive(:pop).and_return([:died, "destroyedalready", 42])
-            expect(ddnssd_container).to_not receive(:suppress_records).with(mock_backend)
-            allow(logger).to receive(:warn).with("DDNSSD::System")
-
-            system.run
-          end
-        end
-
-        context "with abnormal exit status after being stopped" do
-          it "suppresses records" do
-            expect(ddnssd_container).to receive(:stopped).and_return(true)
-
-            system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
-
-            expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 42])
+        describe ":suppress_all" do
+          it "suppresses records from all containers, as well as 'shared' records" do
+            system.instance_variable_get(:@containers)["asdfasdpub80"] = ddnssd_container
             expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
+            expect(mock_backend).to receive(:suppress_shared_records)
+
+            expect(mock_queue).to receive(:pop).and_return([:suppress_all])
 
             system.run
           end
@@ -284,45 +340,18 @@ describe DDNSSD::System do
           context "with multiple backends" do
             let(:env) { base_env.merge("DDNSSD_BACKEND" => "test_queue,log") }
 
-            it "tells the container to suppress itself everywhere" do
-              expect(ddnssd_container).to receive(:stopped).and_return(true)
+            it "suppresses all records from both backends" do
               system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
 
-              expect(mock_queue).to receive(:pop).and_return([:died, "asdfasdfpub80", 42])
+              expect(mock_queue).to receive(:pop).and_return([:suppress_all])
               expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
+              expect(mock_backend).to receive(:suppress_shared_records)
+
               expect(ddnssd_container).to receive(:suppress_records).with(mock_log_backend)
+              expect(mock_log_backend).to receive(:suppress_shared_records)
 
               system.run
             end
-          end
-        end
-      end
-
-      describe ":suppress_all" do
-        it "suppresses records from all containers, as well as 'shared' records" do
-          system.instance_variable_get(:@containers)["asdfasdpub80"] = ddnssd_container
-          expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
-          expect(mock_backend).to receive(:suppress_shared_records)
-
-          expect(mock_queue).to receive(:pop).and_return([:suppress_all])
-
-          system.run
-        end
-
-        context "with multiple backends" do
-          let(:env) { base_env.merge("DDNSSD_BACKEND" => "test_queue,log") }
-
-          it "suppresses all records from both backends" do
-            system.instance_variable_get(:@containers)["asdfasdfpub80"] = ddnssd_container
-
-            expect(mock_queue).to receive(:pop).and_return([:suppress_all])
-            expect(ddnssd_container).to receive(:suppress_records).with(mock_backend)
-            expect(mock_backend).to receive(:suppress_shared_records)
-
-            expect(ddnssd_container).to receive(:suppress_records).with(mock_log_backend)
-            expect(mock_log_backend).to receive(:suppress_shared_records)
-
-            system.run
           end
         end
       end
