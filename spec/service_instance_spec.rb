@@ -75,7 +75,7 @@ describe DDNSSD::ServiceInstance do
         end
 
         context "DDNSSD_IPV6_ONLY mode" do
-          let(:env) { base_env.merge('DDNSSD_IPV6_ONLY' => 'true') }
+          let(:env) { base_env.merge('DDNSSD_IPV6_ONLY' => 'true', 'DDNSSD_HOST_IP_ADDRESS' => '2001:db8::42') }
 
           it "does not have an A record" do
             expect(result).to_not have_A_record
@@ -123,7 +123,7 @@ describe DDNSSD::ServiceInstance do
         end
 
         context "DDNSSD_IPV6_ONLY mode" do
-          let(:env) { base_env.merge('DDNSSD_IPV6_ONLY' => 'true') }
+          let(:env) { base_env.merge('DDNSSD_IPV6_ONLY' => 'true', 'DDNSSD_HOST_IP_ADDRESS' => '2001:db8::42') }
 
           it "does not have an A record" do
             expect(result).to_not have_A_record
@@ -159,7 +159,7 @@ describe DDNSSD::ServiceInstance do
         end
 
         context "DDNSSD_IPV6_ONLY mode" do
-          let(:env) { base_env.merge('DDNSSD_IPV6_ONLY' => 'true') }
+          let(:env) { base_env.merge('DDNSSD_IPV6_ONLY' => 'true', 'DDNSSD_HOST_IP_ADDRESS' => '2001:db8::42') }
 
           it "does not have an A record" do
             expect(result).to_not have_A_record
@@ -199,7 +199,7 @@ describe DDNSSD::ServiceInstance do
         end
 
         context "DDNSSD_IPV6_ONLY mode" do
-          let(:env) { base_env.merge('DDNSSD_IPV6_ONLY' => 'true') }
+          let(:env) { base_env.merge('DDNSSD_IPV6_ONLY' => 'true', 'DDNSSD_HOST_IP_ADDRESS' => '2001:db8::42') }
 
           it "does not have an A record" do
             expect(result).to_not have_A_record

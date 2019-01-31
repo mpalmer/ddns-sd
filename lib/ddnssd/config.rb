@@ -46,7 +46,7 @@ module DDNSSD
     def host_dns_record
       @host_dns_record ||= begin
         if @host_ip_address
-          DDNSSD::DNSRecord.new(@hostname, @record_ttl, :A, @host_ip_address)
+          DDNSSD::DNSRecord.new(@hostname, @record_ttl, @ipv6_only ? :AAAA : :A, @host_ip_address)
         else
           nil
         end
@@ -61,7 +61,9 @@ module DDNSSD
       @ipv6_only       = pluck_boolean(env, "DDNSSD_IPV6_ONLY", default: false)
       @enable_metrics  = pluck_boolean(env, "DDNSSD_ENABLE_METRICS", default: false)
       @record_ttl      = pluck_integer(env, "DDNSSD_RECORD_TTL", valid_range: 0..(2**31 - 1), default: 60)
-      @host_ip_address = pluck_ipv4_address(env, "DDNSSD_HOST_IP_ADDRESS", default: nil)
+      @host_ip_address = @ipv6_only ?
+        pluck_ipv6_address(env, "DDNSSD_HOST_IP_ADDRESS", default: nil)
+        : pluck_ipv4_address(env, "DDNSSD_HOST_IP_ADDRESS", default: nil)
       @docker_host     = pluck_string(env, "DOCKER_HOST", default: "unix:///var/run/docker.sock")
       @backend_classes = find_backend_classes(env)
       @backend_configs = pluck_backend_configs(env)
@@ -160,6 +162,26 @@ module DDNSSD
       unless addr.ipv4?
         raise InvalidEnvironmentError,
           "Value for #{key} (#{env[key].inspect}) is not an IPv4 address"
+      end
+
+      addr.to_s
+    end
+
+    def pluck_ipv6_address(env, key, default: nil)
+      if env[key].nil? || env[key].empty?
+        return default
+      end
+
+      begin
+        addr = IPAddr.new(env[key])
+      rescue ArgumentError
+        raise InvalidEnvironmentError,
+          "Value for #{key} (#{env[key].inspect}) is not an IP address"
+      end
+
+      unless addr.ipv6?
+        raise InvalidEnvironmentError,
+          "Value for #{key} (#{env[key].inspect}) is not an IPv6 address"
       end
 
       addr.to_s

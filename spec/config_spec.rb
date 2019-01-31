@@ -257,6 +257,29 @@ describe DDNSSD::Config do
         end
       end
 
+      context "with an IPv6 address and DDNSSD_IPV6_ONLY is enabled" do
+        let(:env) { base_env.merge(
+          "DDNSSD_HOST_IP_ADDRESS" => "2001:db8::42",
+          "DDNSSD_IPV6_ONLY" => 'true'
+        ) }
+
+        it "is OK" do
+          expect(value).to be_a(String)
+          expect(value).to eq("2001:db8::42")
+        end
+      end
+
+      context "with an IPv4 address and DDNSSD_IPV6_ONLY is enabled" do
+        let(:env) { base_env.merge(
+          "DDNSSD_HOST_IP_ADDRESS" => "192.0.2.42",
+          "DDNSSD_IPV6_ONLY" => 'true'
+        ) }
+
+        it "freaks out" do
+          expect { config }.to raise_error(DDNSSD::Config::InvalidEnvironmentError)
+        end
+      end
+
       context "with some gibberish string" do
         let(:env) { base_env.merge("DDNSSD_HOST_IP_ADDRESS" => "ermahgerd") }
 
@@ -290,6 +313,30 @@ describe DDNSSD::Config do
   describe "#host_dns_record" do
     it "is nil if there's no host IP address" do
       expect(config.host_dns_record).to be(nil)
+    end
+
+    context 'with host IP address' do
+      let(:env) { base_env.merge("DDNSSD_HOST_IP_ADDRESS" => "192.0.2.42") }
+
+      it 'is A record' do
+        dns_record = config.host_dns_record
+        expect(dns_record).to be_a(DDNSSD::DNSRecord)
+        expect(dns_record.name).to eq(env['DDNSSD_HOSTNAME'])
+        expect(dns_record.type).to eq(:A)
+        expect(dns_record.value).to eq(env['DDNSSD_HOST_IP_ADDRESS'])
+      end
+    end
+
+    context 'with host IP address and IPv6 only' do
+      let(:env) { base_env.merge("DDNSSD_HOST_IP_ADDRESS" => "2001:db8::42", "DDNSSD_IPV6_ONLY" => "true") }
+
+      it 'is AAAA record' do
+        dns_record = config.host_dns_record
+        expect(dns_record).to be_a(DDNSSD::DNSRecord)
+        expect(dns_record.name).to eq(env['DDNSSD_HOSTNAME'])
+        expect(dns_record.type).to eq(:AAAA)
+        expect(dns_record.value).to eq('2001:DB8::42')
+      end
     end
   end
 end
