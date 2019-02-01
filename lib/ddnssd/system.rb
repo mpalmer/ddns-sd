@@ -40,11 +40,11 @@ module DDNSSD
         @metrics_server.run
       end
 
+      @backends.each { |backend| reconcile_containers(backend) }
+
       if @config.host_dns_record
         @backends.each { |backend| backend.publish_record(@config.host_dns_record) }
       end
-
-      @backends.each { |backend| reconcile_containers(backend) }
 
       loop do
         item = @queue.pop
