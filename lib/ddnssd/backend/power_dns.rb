@@ -86,6 +86,13 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
     end
   end
 
+  def rest
+    if @pg_conn
+      @pg_conn.close rescue nil
+    end
+    @conn = nil
+  end
+
   def dns_records
     all_records = @stats.measure(op: "list") do
       retryable { resource_record_store.all }

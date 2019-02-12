@@ -761,4 +761,14 @@ describe DDNSSD::Backend::PowerDNS do
       end
     end
   end
+
+  describe 'rest' do
+    it "doesn't break later calls to publish_record" do
+      backend.publish_record(DDNSSD::DNSRecord.new("flingle", 42, :A, "192.0.2.42"))
+      backend.rest
+      backend.publish_record(DDNSSD::DNSRecord.new("kaboom", 42, :A, "192.0.2.43"))
+      records = rr_store.lookup(name: "kaboom.example.com")
+      expect(records.size).to eq(1)
+    end
+  end
 end

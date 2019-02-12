@@ -58,9 +58,12 @@ describe DDNSSD::System do
     allow(DDNSSD::Backend::TestQueue).to receive(:new).with(instance_of(DDNSSD::Config)).and_return(mock_backend)
     allow(DDNSSD::Backend::Log).to receive(:new).with(instance_of(DDNSSD::Config)).and_return(mock_log_backend)
     allow(mock_queue).to receive(:push)
+    allow(mock_queue).to receive(:empty?).and_return(true)
     allow(mock_watcher).to receive(:shutdown)
     allow(mock_backend).to receive(:publish_record)
+    allow(mock_backend).to receive(:rest)
     allow(mock_log_backend).to receive(:publish_record)
+    allow(mock_log_backend).to receive(:rest)
   end
 
   describe "#shutdown" do
@@ -83,7 +86,7 @@ describe DDNSSD::System do
       allow(system).to receive(:reconcile_containers).and_return(nil)
     end
 
-    context "initialization" do
+    describe "initialization" do
       it "creates a queue" do
         system.run
 

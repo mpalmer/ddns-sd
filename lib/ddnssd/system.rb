@@ -102,6 +102,10 @@ module DDNSSD
         else
           @logger.error(progname) { "SHOULDN'T HAPPEN: docker watcher sent an unrecognized message: #{item.inspect}.  This is a bug, please report it." }
         end
+
+        if @queue.empty?
+          @backends.each { |backend| backend.rest }
+        end
       end
     end
 

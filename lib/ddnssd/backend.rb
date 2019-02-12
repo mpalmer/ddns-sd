@@ -103,6 +103,10 @@ module DDNSSD
       end
     end
 
+    def rest
+      # Called when it's likely that nothing is going to happen for a while
+    end
+
     private
 
     def progname
