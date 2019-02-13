@@ -46,6 +46,10 @@ module DDNSSD
         @backends.each { |backend| backend.publish_record(@config.host_dns_record) }
       end
 
+      if @queue.empty?
+        @backends.each { |backend| backend.rest }
+      end
+
       loop do
         item = @queue.pop
         @logger.debug(progname) { "Received message #{item.inspect}" }
