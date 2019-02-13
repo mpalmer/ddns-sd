@@ -88,7 +88,15 @@ class DDNSSD::Backend::PowerDNS < DDNSSD::Backend
 
   def rest
     if @pg_conn
-      @pg_conn.close rescue nil
+      begin
+        @pg_conn.close
+        @logger.debug(progname) { "Closed connection to postgresql." }
+      rescue => ex
+        @logger.error(progname) do
+          (["Failed to close connection to postgresql. #{ex.message} (#{ex.class})"] + ex.backtrace).join("\n  ")
+        end
+        nil
+      end
     end
     @conn = nil
   end
