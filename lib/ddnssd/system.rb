@@ -46,11 +46,11 @@ module DDNSSD
         @backends.each { |backend| backend.publish_record(@config.host_dns_record) }
       end
 
-      if @queue.empty?
-        @backends.each { |backend| backend.rest }
-      end
-
       loop do
+        if @queue.empty?
+          @backends.each { |backend| backend.rest }
+        end
+
         item = @queue.pop
         @logger.debug(progname) { "Received message #{item.inspect}" }
 
@@ -105,10 +105,6 @@ module DDNSSD
           break
         else
           @logger.error(progname) { "SHOULDN'T HAPPEN: docker watcher sent an unrecognized message: #{item.inspect}.  This is a bug, please report it." }
-        end
-
-        if @queue.empty?
-          @backends.each { |backend| backend.rest }
         end
       end
     end
