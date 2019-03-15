@@ -1,0 +1,77 @@
+#!/usr/bin/env ruby
+
+# Display info about all services found in DNS with an intance
+# name matching a given argument. Assumes PowerDNS as the backend.
+
+name_arg = ARGV[0]&.downcase
+
+if name_arg.nil?
+  $stderr.puts "You need to provide a name to lookup, like 'lookup business4'"
+  exit 1
+end
+
+require 'ddnssd/config'
+require 'ddnssd/dns_record'
+require 'ddnssd/backend'
+require 'ddnssd/backend/power_dns'
+
+class DNSSDLookup
+  def initialize
+    logger = Logger.new($stderr)
+    logger.level = "ERROR"
+
+    backend = DDNSSD::Backend::PowerDNS.new(DDNSSD::Config.new(ENV, logger: logger))
+
+    @all_records = backend.dns_records
+    @srv_records = @all_records.select { |rr| rr.type == :SRV }
+  end
+
+  def lookup(name_arg)
+    matches = @srv_records.select do |rr|
+      rr.name.split('.').first.downcase == name_arg
+    end
+
+    if matches.empty?
+      puts '', 'No records found in current datacenter.', ''
+      return
+    end
+
+    results = matches.map do |rr|
+      {
+        host: rr.data.target.to_s.split('.').last,
+        ip_address: ip_address_for(rr.data.target.to_s),
+        port: rr.data.port,
+        type: rr.name.split('.')[-2][1..-1],
+        priority: rr.data.priority,
+        weight: rr.data.weight
+      }
+    end.sort_by { |h| [h[:type], h[:host]] }
+
+    widths = {
+      host: max_strlen(results, :host),
+      ip: max_strlen(results, :ip_address),
+      type: max_strlen(results, :type)
+    }
+
+    format_str = "%#{widths[:host]}s   %-#{widths[:ip]}s  %7s   %#{widths[:type]}s   %8s   %6s"
+
+    heading = format_str % ['Host', 'IP', 'Port', 'Type', 'Priority', 'Weight']
+    puts '', heading, '-' * heading.length
+    results.each do |r|
+      puts format_str % [r[:host], r[:ip_address], r[:port], r[:type], r[:priority], r[:weight]]
+    end
+    puts ''
+  end
+
+  def ip_address_for(hostname)
+    @all_records.select do |rr|
+      (rr.type == :A || rr.type == :AAAA) && rr.name == hostname
+    end.map(&:value).join(', ')
+  end
+
+  def max_strlen(arr, key)
+    arr.sort_by { |h| h[key].length }.last[key].length
+  end
+end
+
+DNSSDLookup.new.lookup(name_arg)
