@@ -43,7 +43,7 @@ end
 
 def print_records(records, type, format)
   records.select { |rr| rr.type.to_s == type.to_s }.each do |rr|
-    puts format % [rr.name.to_s, rr.ttl, rr.type, rr.value]
+    puts (format % [rr.name.to_s, rr.ttl, rr.type, rr.value]).strip
   end
 end
 
