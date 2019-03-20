@@ -55,7 +55,7 @@ class DNSSDLookup
 
     format_str = "%#{widths[:host]}s   %-#{widths[:ip]}s  %7s   %#{widths[:type]}s   %8s   %6s"
 
-    heading = format_str % ['Host', 'IP', 'Port', 'Type', 'Priority', 'Weight']
+    heading = format_str % ['Host', 'IP', 'Port', 'Service', 'Priority', 'Weight']
     puts '', heading, '-' * heading.length
     results.each do |r|
       puts format_str % [r[:host], r[:ip_address], r[:port], r[:type], r[:priority], r[:weight]]
