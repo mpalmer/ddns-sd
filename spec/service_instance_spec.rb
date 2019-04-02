@@ -656,9 +656,17 @@ describe DDNSSD::ServiceInstance do
         }
       end
 
-      # Exposing isn't needed to publish a port or connect to a container.
-      it "has a SRV record pointing to the container+port" do
-        expect(result).to have_SRV_record("exposed80._http._tcp", "0 0 1337 asdfasdfexpo.speccy")
+      context 'default behaviour' do
+        it_behaves_like "a service instance error"
+      end
+
+      context 'DDNSSD_VALIDATE_PORTS is false' do
+        let(:env) { base_env.merge('DDNSSD_VALIDATE_PORTS' => 'false') }
+
+        it "has a SRV record pointing to the container+port" do
+          allow(logger).to receive(:warn)
+          expect(result).to have_SRV_record("exposed80._http._tcp", "0 0 1337 asdfasdfexpo.speccy")
+        end
       end
     end
   end

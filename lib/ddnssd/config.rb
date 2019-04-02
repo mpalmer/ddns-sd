@@ -16,6 +16,7 @@ module DDNSSD
                 :record_ttl,
                 :host_ip_address,
                 :docker_host,
+                :validate_ports,
                 :logger,
                 :backend_classes,
                 :backend_configs
@@ -65,6 +66,7 @@ module DDNSSD
         pluck_ipv6_address(env, "DDNSSD_HOST_IP_ADDRESS", default: nil)
         : pluck_ipv4_address(env, "DDNSSD_HOST_IP_ADDRESS", default: nil)
       @docker_host     = pluck_string(env, "DOCKER_HOST", default: "unix:///var/run/docker.sock")
+      @validate_ports  = pluck_boolean(env, "DDNSSD_VALIDATE_PORTS", default: true)
       @backend_classes = find_backend_classes(env)
       @backend_configs = pluck_backend_configs(env)
 

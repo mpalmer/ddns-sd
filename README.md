@@ -191,6 +191,15 @@ sensible default which works OK in at least some circumstances.
     Docker via TCP, you'll need to change this, otherwise you can leave it
     alone.
 
+* **`DDNSSD_VALIDATE_PORTS`**
+
+    *Default*: `"true"`
+
+    If set to a true-ish string (`"yes"`, `"true"`, `"on"`, or `"1"`), then
+    service instances will only be registered if the labelled port is
+    an exposed port in the container. Otherwise a warning will be logged,
+    but the service instance will be registered.
+
 Each DNS service plugin may also have its own configuration variables that
 can be used to configure backend-specific items; see the description of your
 chosen service backend under "Support DNS Services", below, for more
@@ -582,14 +591,14 @@ The DNS Zone name is equal to the `DNSSD_BASE_DOMAIN`.
     (required)
 
     The name of the resource group that owns the DNS Zone.
-    
-    
+
+
 * **`DDNSSD_AZURE_ACCESS_TOKEN`**
 
     (required)
 
     An azure access token (in json format) - this is the output of `az account get-access-token`.
-    
+
 
 ## Logging-only backend
 
