@@ -1,0 +1,9 @@
+Name: multi_network
+HostConfig:
+  PortBindings: {}
+Config:
+  Labels: {}
+NetworkSettings:
+  Ports: {}
+id: asdfasdfmultinetwork
+

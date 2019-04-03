@@ -1,4 +1,4 @@
-Name: basic_container
+Name: multi_network
 HostConfig:
   PortBindings: {}
 Config:
@@ -10,5 +10,9 @@ NetworkSettings:
       Gateway: 172.17.0.1
       GlobalIPv6Address: '2001:db8::42'
       IPAddress: '172.17.0.42'
-id: asdfasdfbasiccontainer
+    kwai:
+      Gateway: '172.18.0.1'
+      IPAddress: '172.18.0.42'
+      GlobalIPv6Address: ''
+id: asdfasdfmultinetwork
 

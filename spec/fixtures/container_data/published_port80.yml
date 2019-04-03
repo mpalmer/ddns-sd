@@ -13,8 +13,10 @@ NetworkSettings:
     80/udp:
       - HostIp: 0.0.0.0
         HostPort: '8080'
-  Gateway: 172.17.0.1
-  GlobalIPv6Address: '2001:db8::80'
-  IPAddress: 172.17.0.2
+  Networks:
+    bridge:
+      Gateway: 172.17.0.1
+      GlobalIPv6Address: '2001:db8::80'
+      IPAddress: 172.17.0.2
 id: asdfasdfpub80
 

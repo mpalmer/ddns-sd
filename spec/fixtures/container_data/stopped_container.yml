@@ -7,8 +7,10 @@ Config:
     80/udp: {}
 NetworkSettings:
   Ports: {}
-  Gateway: ""
-  GlobalIPv6Address: ""
-  IPAddress: ""
+  Networks:
+    bridge:
+      Gateway: ""
+      GlobalIPv6Address: ""
+      IPAddress: ""
 id: asdfasdfstopped80
 

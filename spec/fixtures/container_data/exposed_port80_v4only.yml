@@ -7,8 +7,10 @@ Config:
     80/udp: {}
 NetworkSettings:
   Ports: {}
-  Gateway: 172.17.0.1
-  GlobalIPv6Address: ''
-  IPAddress: 172.17.0.42
+  Networks:
+    bridge:
+      Gateway: 172.17.0.1
+      GlobalIPv6Address: ''
+      IPAddress: 172.17.0.42
 id: asdfasdfexposed80
 

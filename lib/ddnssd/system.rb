@@ -57,7 +57,9 @@ module DDNSSD
         case (item.first rescue nil)
         when :started
           docker_container = begin
-            Docker::Container.get(item.last, {}, docker_connection)
+            with_docker_api_version "1.36" do
+              Docker::Container.get(item.last, {}, docker_connection)
+            end
           rescue Docker::Error::NotFoundError
             # container was destroyed before we processed this message
             @logger.warn(progname) { "Docker says container #{item.last} does not exist. Ignoring :started message." }
@@ -182,7 +184,9 @@ module DDNSSD
       # Thanks, Docker!
       Docker::Container.all({}, docker_connection).each do |c|
         begin
-          @containers[c.id] = DDNSSD::Container.new(Docker::Container.get(c.id, {}, docker_connection), @config)
+          with_docker_api_version "1.36" do
+            @containers[c.id] = DDNSSD::Container.new(Docker::Container.get(c.id, {}, docker_connection), @config)
+          end
         rescue Docker::Error::NotFoundError
           nil
         end
@@ -203,6 +207,29 @@ module DDNSSD
 
       @config.metrics_registry.gauge(:ddnssd_start_timestamp, "When the server was started").set(label_set, Time.now.to_i)
       #:nocov:
+    end
+
+    # Despite JSON being a potentially backwards-compatible data format (in
+    # that deserialisation doesn't require full understanding of the data
+    # structure, and unknown keys can just be ignored), the Docker API in its
+    # infinite wisdom provides different results based on the API version with
+    # which you make a request.  However, the `docker-api` gem hasn't been
+    # updated in about 175 years, meaning that certain rather useful
+    # enhancements to certain data structures aren't available.  Thus, we have
+    # this rather ugly little piece of work, which temporarily modifies the API
+    # version constant(!!!) so that requests can pretend to be something
+    # they're not.
+    #
+    def with_docker_api_version(v)
+      original_value = Docker.const_get(:API_VERSION)
+      begin
+        Docker.__send__(:remove_const, :API_VERSION)
+        Docker.const_set(:API_VERSION, v)
+        yield
+      ensure
+        Docker.__send__(:remove_const, :API_VERSION)
+        Docker.const_set(:API_VERSION, original_value)
+      end
     end
   end
 end
