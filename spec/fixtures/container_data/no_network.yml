@@ -1,9 +1,12 @@
-Name: multi_network
+Name: no_network
 HostConfig:
   PortBindings: {}
 Config:
-  Labels: {}
+  Labels:
+    org.discourse.service._http.port: "80"
+  ExposedPorts:
+    80/tcp: {}
 NetworkSettings:
   Ports: {}
-id: asdfasdfmultinetwork
+id: asdfasdfnonetwork
 

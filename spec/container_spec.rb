@@ -100,6 +100,10 @@ describe DDNSSD::Container do
     it "doesn't return an IPv6 address" do
       expect(container.ipv6_address).to eq(nil)
     end
+
+    it "is not addressable" do
+      expect(container.addressable?).to be(false)
+    end
   end
 
   context "container with two networks" do
