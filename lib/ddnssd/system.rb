@@ -72,7 +72,10 @@ module DDNSSD
               @backends.each { |backend| @containers[item.last].suppress_records(backend) }
             end
             @containers[item.last] = DDNSSD::Container.new(docker_container, @config)
-            @backends.each { |backend| @containers[item.last].publish_records(backend) }
+            @backends.each do |backend|
+              @logger.debug(progname) { "Publishing #{@containers[item.last].dns_records.length} record(s) to #{backend.class.to_s} backend" }
+              @containers[item.last].publish_records(backend)
+            end
           end
         when :stopped
           @containers[item.last].stopped = true if @containers[item.last]
