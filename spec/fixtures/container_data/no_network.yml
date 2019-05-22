@@ -8,5 +8,6 @@ Config:
     80/tcp: {}
 NetworkSettings:
   Ports: {}
+  Networks: {}
 id: asdfasdfnonetwork
 
