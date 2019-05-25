@@ -9,10 +9,11 @@ module DDNSSD
 
     attr_accessor :stopped, :crashed
 
-    def initialize(docker_data, system_config)
+    def initialize(docker_data, system_config, system)
       @id = docker_data.id
 
       @config = system_config
+      @system = system
       @logger = @config.logger
 
       @name = (docker_data.info["Name"] || docker_data.info["Names"].first).sub(/\A\//, '')
@@ -25,29 +26,36 @@ module DDNSSD
       if @host_network
         @ipv4_address = nil
         @ipv6_address = nil
-        @exposed_ports = nil
-        @published_ports = nil
-      else
-        if docker_data.info["NetworkSettings"]["Networks"].nil? || docker_data.info["NetworkSettings"]["Networks"].empty?
-          @logger.debug(progname) { "No network found in NetworkSettings: #{docker_data.info["NetworkSettings"].inspect}" }
-          # No network?  No problems!
-          @ipv4_address = nil
-          @ipv6_address = nil
-        elsif docker_data.info["NetworkSettings"]["Networks"]&.length > 1
-          @logger.error(progname) { "Unsupported NetworkSettings.Networks.  Only a single network is supported at this time." }
-          @logger.info(progname)  { "NetworkSettings is: #{docker_data.info["NetworkSettings"].inspect}" }
-
-          @ipv4_address = nil
-          @ipv6_address = nil
-        else
-          docker_network = docker_data.info["NetworkSettings"]["Networks"].values.first
-          @ipv4_address  = docker_network["IPAddress"]
-          @ipv6_address  = docker_network["GlobalIPv6Address"]
+      elsif root_id = docker_data.info["Config"]["Labels"]["org.hezmatt.moby-derp.root-container-id"]
+        @logger.info(progname) { "Using #{root_id} as source of network address information" }
+        if @id == root_id
+          #:nocov:
+          raise InvalidContainerError,
+                "root-container-id (#{@id.inspect}) points to us!"
+          #:nocov:
         end
+        root_container = system.container(root_id)
+        @ipv4_address = root_container.ipv4_address
+        @ipv6_address = root_container.ipv6_address
+      elsif docker_data.info["NetworkSettings"]["Networks"].nil? || docker_data.info["NetworkSettings"]["Networks"].empty?
+        @logger.debug(progname) { "No network found in NetworkSettings: #{docker_data.info["NetworkSettings"].inspect}" }
+        # No network?  No problems!
+        @ipv4_address = nil
+        @ipv6_address = nil
+      elsif docker_data.info["NetworkSettings"]["Networks"]&.length > 1
+        @logger.error(progname) { "Unsupported NetworkSettings.Networks.  Only a single network is supported at this time." }
+        @logger.info(progname)  { "NetworkSettings is: #{docker_data.info["NetworkSettings"].inspect}" }
 
-        @exposed_ports   = docker_data.info["Config"]["ExposedPorts"] || {}
-        @published_ports = docker_data.info["NetworkSettings"]["Ports"]
+        @ipv4_address = nil
+        @ipv6_address = nil
+      else
+        docker_network = docker_data.info["NetworkSettings"]["Networks"].values.first
+        @ipv4_address  = docker_network["IPAddress"]
+        @ipv6_address  = docker_network["GlobalIPv6Address"]
       end
+
+      @exposed_ports   = docker_data.info["Config"]["ExposedPorts"] || {}
+      @published_ports = docker_data.info["NetworkSettings"]["Ports"]
 
       @logger.debug(progname) { "IPv4 address: #{@ipv4_address.inspect}" }
       @logger.debug(progname) { "IPv6 address: #{@ipv6_address.inspect}" }

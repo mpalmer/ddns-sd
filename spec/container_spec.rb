@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 require_relative './spec_helper'
 
+require 'ddnssd/system'
 require 'ddnssd/config'
 require 'ddnssd/container'
 require 'ddnssd/service_instance'
+require 'ddnssd/backend'
 
 describe DDNSSD::Container do
   uses_logger
@@ -18,10 +20,11 @@ describe DDNSSD::Container do
   end
 
   let(:config) { DDNSSD::Config.new(env, logger: logger) }
+  let(:system) { instance_double(DDNSSD::System) }
 
   let(:docker_data) { container_fixture(container_name) }
 
-  let(:container) { DDNSSD::Container.new(docker_data, config) }
+  let(:container) { DDNSSD::Container.new(docker_data, config, system) }
 
   context "basic container data" do
     let(:container_name) { "basic_container" }
@@ -104,6 +107,35 @@ describe DDNSSD::Container do
 
     it "is not addressable" do
       expect(container.addressable?).to be(false)
+    end
+  end
+
+  context "container with a moby-derp ref to another container" do
+    let(:container_name) { "moby_derp_ref" }
+
+    before(:each) do
+      allow(system)
+        .to receive(:container)
+        .with("asdfasdfbasiccontainer")
+        .and_return(DDNSSD::Container.new(container_fixture("basic_container"), config, system))
+    end
+
+    it "doesn't log an error" do
+      expect(logger).to_not receive(:error)
+
+      container
+    end
+
+    it "returns the referenced container's IPv4 address" do
+      expect(container.ipv4_address).to eq("172.17.0.42")
+    end
+
+    it "returns the referenced container's IPv6 address" do
+      expect(container.ipv6_address).to eq("2001:db8::42")
+    end
+
+    it "is addressable" do
+      expect(container.addressable?).to be(true)
     end
   end
 
@@ -297,7 +329,7 @@ describe DDNSSD::Container do
     it "doesn't do anything interesting without services" do
       expect(mock_backend).to_not receive(:publish_record)
 
-      DDNSSD::Container.new(container_fixture("basic_container"), config).publish_records(mock_backend)
+      DDNSSD::Container.new(container_fixture("basic_container"), config, system).publish_records(mock_backend)
     end
 
     it "publishes records if the container has them" do
@@ -305,7 +337,7 @@ describe DDNSSD::Container do
         expect(mock_backend).to receive(:publish_record).with(rr)
       end
 
-      DDNSSD::Container.new(container_fixture("published_port80"), config).publish_records(mock_backend)
+      DDNSSD::Container.new(container_fixture("published_port80"), config, system).publish_records(mock_backend)
     end
   end
 
@@ -315,7 +347,7 @@ describe DDNSSD::Container do
     it "doesn't do anything interesting without services" do
       expect(mock_backend).to_not receive(:suppress_record)
 
-      DDNSSD::Container.new(container_fixture("basic_container"), config).suppress_records(mock_backend)
+      DDNSSD::Container.new(container_fixture("basic_container"), config, system).suppress_records(mock_backend)
     end
 
     it "suppresses records if the container has them" do
@@ -323,7 +355,7 @@ describe DDNSSD::Container do
         expect(mock_backend).to receive(:suppress_record).with(rr) unless %i{TXT PTR}.include?(rr.type)
       end
 
-      DDNSSD::Container.new(container_fixture("published_port80"), config).suppress_records(mock_backend)
+      DDNSSD::Container.new(container_fixture("published_port80"), config, system).suppress_records(mock_backend)
     end
   end
 end
