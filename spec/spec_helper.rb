@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 require 'bundler'
-Bundler.setup(:default, :development)
+Bundler.setup(:default, :development, :azure_backend, :route53_backend, :psql_backend, :psql_sqlite, :psql_pg)
 require 'rspec/core'
 require 'rspec/mocks'
 
